@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package github.com.mmrgreenteaa.user.management.service.interal.auth1;
+
+option go_package = "github.com/mmrgreenteaa/user-management-service/interal/gen/auth;auth";
+
+import "google/protobuf/empty.proto";
+
+service TestService {
+  rpc EmptyCall (google.protobuf.Empty) returns (google.protobuf.Empty);
+}
+
+service Auth{ 
+    rpc Login(UserInfoRequest) returns (SignInUserResponse){}
+}
+
+message UserInfoRequest{ 
+    string login = 1; 
+    string password = 2; 
+    string user_agent = 3; 
+    string ip = 4; 
+}
+
+message SignInUserResponse {
+  string access_token = 2;
+  string refresh_token = 3;
+}
