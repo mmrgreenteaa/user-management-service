@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package github.com.mmrgreenteaa.user.management.service.interal.user_manegement;
+
+option go_package = "github.com/mmrgreenteaa/user-management-service/interal/gen/user_manegement;user_manegement";
+
+import "google/protobuf/empty.proto";
+
+message UserValidRequest{ 
+    string login = 1; 
+    string password =2; 
+}
+
+message UserValidResponse{
+    string user_id = 1; 
+} 
+
+message UserRegistrationReq{
+    string login = 1; 
+    string password = 2;
+    string email = 3;     
+}
+
+message UserLoginEditReq{
+    string old_login = 1;
+    string new_login = 2;  
+}
+
+message LoginReq{ 
+    string login = 1;  
+}
+
+service UserManagement{ 
+    rpc VerifyCredentials(UserValidRequest) returns (UserValidResponse){}
+    rpc RegistrationUser(UserRegistrationReq) returns (google.protobuf.Empty){}
+    rpc EditLogin(UserLoginEditReq) returns (google.protobuf.Empty){}
+    rpc DeleteUser(LoginReq) returns (google.protobuf.Empty){}
+};

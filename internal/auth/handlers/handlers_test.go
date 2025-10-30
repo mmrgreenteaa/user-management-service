@@ -6,8 +6,9 @@ import (
 	"net"
 	"testing"
 
-	authgprc "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/auth"
+	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/auth"
 	"github.com/mmrgreenteaa/user-management-service/internal/auth/datebase/postgresql"
+	"github.com/mmrgreenteaa/user-management-service/internal/gen/proto/auth"
 	genAuth "github.com/mmrgreenteaa/user-management-service/internal/gen/proto/auth"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -34,13 +35,13 @@ func TestGenerateRefreshToken(t *testing.T) {
 
 }
 
-func setupTestServer(t *testing.T) (*grpc.Server, net.Listener) {
+func setupTestServer() (*grpc.Server, net.Listener) {
 
 	lis, err := net.Listen("tcp", ":0")
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 	}
-	s := &Server{
+	s := &AuthServer{
 		Db: *postgresql.Сonnect(),
 	}
 
@@ -58,7 +59,7 @@ func setupTestServerMiddleWare() (*grpc.Server, net.Listener) {
 		log.Fatalf("Failed to listen: %v", err)
 	}
 
-	grpcServer := grpc.NewServer(grpc.UnaryInterceptor(authgprc.UnaryServerInterceptor(CheckJWT)))
+	grpcServer := grpc.NewServer(grpc.UnaryInterceptor(grpc_auth.UnaryServerInterceptor(CheckJWT)))
 	genAuth.RegisterTestServiceServer(grpcServer, &testServer{})
 
 	go grpcServer.Serve(lis)
@@ -86,9 +87,58 @@ func TestMiddleWare(t *testing.T) {
 
 }
 
+func TestRefresh(t *testing.T) {
+
+	grpcServer, lis := setupTestServer()
+	defer grpcServer.Stop()
+	conn, err := grpc.NewClient(lis.Addr().String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	require.NoError(t, err)
+	defer conn.Close()
+
+	clinet := genAuth.NewAuthClient(conn)
+	require.NoError(t, err)
+	tokens, err := CreateRefreshAcsessToken()
+	require.NoError(t, err)
+	s := &AuthServer{
+		Db: *postgresql.Сonnect(),
+	}
+	s.Db.AddRefresh(tokens.refresh, "Test", "Test")
+	md := metadata.Pairs("authorization", tokens.acsess)
+	ctx := metadata.NewOutgoingContext(context.Background(), md)
+	req := genAuth.RefreshRequst{RefreshToken: tokens.refresh}
+	res, err := clinet.RefreshToken(ctx, &req)
+	assert.NoError(t, err)
+	if res.RefreshToken == tokens.refresh {
+		assert.Fail(t, "the token has not been updated")
+	}
+	t.Log(res)
+}
+func TestLogOut(t *testing.T) {
+
+	grpcServer, lis := setupTestServer()
+	defer grpcServer.Stop()
+	conn, err := grpc.NewClient(lis.Addr().String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	require.NoError(t, err)
+	defer conn.Close()
+
+	clinet := genAuth.NewAuthClient(conn)
+	require.NoError(t, err)
+	tokens, err := CreateRefreshAcsessToken()
+	require.NoError(t, err)
+	s := &AuthServer{
+		Db: *postgresql.Сonnect(),
+	}
+	s.Db.AddRefresh(tokens.refresh, "Test", "Test")
+	md := metadata.Pairs("authorization", tokens.acsess)
+	ctx := metadata.NewOutgoingContext(context.Background(), md)
+	req := auth.RefreshRequst{RefreshToken: tokens.refresh}
+	_, err = clinet.LogOut(ctx, &req)
+	assert.NoError(t, err)
+}
+
 func TestLogin(t *testing.T) {
 
-	grpcServer, lis := setupTestServer(t)
+	grpcServer, lis := setupTestServer()
 	defer grpcServer.Stop()
 	conn, err := grpc.NewClient(lis.Addr().String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 
@@ -107,5 +157,5 @@ func TestLogin(t *testing.T) {
 	if res.AccessToken == "" {
 		assert.Fail(t, "AccessToken the empty")
 	}
-
+	log.Println(res)
 }

@@ -6,22 +6,45 @@ option go_package = "github.com/mmrgreenteaa/user-management-service/interal/gen
 
 import "google/protobuf/empty.proto";
 
+
 service TestService {
   rpc EmptyCall (google.protobuf.Empty) returns (google.protobuf.Empty);
 }
 
 service Auth{ 
     rpc Login(UserInfoRequest) returns (SignInUserResponse){}
+    rpc VerifyAccess(AccessRequest) returns(VerifyAccessResponse){}
+    rpc RefreshToken(RefreshRequest) returns (SignInUserResponse){}
+    rpc Logout(LogoutRequest) returns (google.protobuf.Empty){}
+}
+
+message RefreshRequest{ 
+  string refresh_token = 1; 
+}
+
+message AccessRequest{
+    string token = 1; 
 }
 
 message UserInfoRequest{ 
     string login = 1; 
     string password = 2; 
     string user_agent = 3; 
-    string ip = 4; 
+ string ip = 4; 
 }
 
 message SignInUserResponse {
-  string access_token = 2;
-  string refresh_token = 3;
+  string access_token = 1;
+  string refresh_token = 2;
+}
+
+message LogoutRequest {
+  string refresh_token = 1; 
+  string user_agent = 2;
+  string ip = 3 ;
+}
+
+message VerifyAccessResponse {
+  string user_id = 1;
+  string login = 2;
 }
