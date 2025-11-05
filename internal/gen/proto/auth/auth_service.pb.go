@@ -25,6 +25,8 @@ const (
 type RefreshRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	RefreshToken  string                 `protobuf:"bytes,1,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
+	UserAgent     string                 `protobuf:"bytes,2,opt,name=user_agent,json=userAgent,proto3" json:"user_agent,omitempty"`
+	Ip            string                 `protobuf:"bytes,3,opt,name=ip,proto3" json:"ip,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -62,6 +64,20 @@ func (*RefreshRequest) Descriptor() ([]byte, []int) {
 func (x *RefreshRequest) GetRefreshToken() string {
 	if x != nil {
 		return x.RefreshToken
+	}
+	return ""
+}
+
+func (x *RefreshRequest) GetUserAgent() string {
+	if x != nil {
+		return x.UserAgent
+	}
+	return ""
+}
+
+func (x *RefreshRequest) GetIp() string {
+	if x != nil {
+		return x.Ip
 	}
 	return ""
 }
@@ -346,9 +362,12 @@ var File_auth_service_proto protoreflect.FileDescriptor
 
 const file_auth_service_proto_rawDesc = "" +
 	"\n" +
-	"\x12auth_service.proto\x12=github.com.mmrgreenteaa.user.management.service.interal.auth1\x1a\x1bgoogle/protobuf/empty.proto\"5\n" +
+	"\x12auth_service.proto\x12=github.com.mmrgreenteaa.user.management.service.interal.auth1\x1a\x1bgoogle/protobuf/empty.proto\"d\n" +
 	"\x0eRefreshRequest\x12#\n" +
-	"\rrefresh_token\x18\x01 \x01(\tR\frefreshToken\"%\n" +
+	"\rrefresh_token\x18\x01 \x01(\tR\frefreshToken\x12\x1d\n" +
+	"\n" +
+	"user_agent\x18\x02 \x01(\tR\tuserAgent\x12\x0e\n" +
+	"\x02ip\x18\x03 \x01(\tR\x02ip\"%\n" +
 	"\rAccessRequest\x12\x14\n" +
 	"\x05token\x18\x01 \x01(\tR\x05token\"r\n" +
 	"\x0fUserInfoRequest\x12\x14\n" +

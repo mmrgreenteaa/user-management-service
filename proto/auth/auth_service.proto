@@ -20,6 +20,8 @@ service Auth{
 
 message RefreshRequest{ 
   string refresh_token = 1; 
+  string user_agent = 2;
+  string ip = 3 ;
 }
 
 message AccessRequest{

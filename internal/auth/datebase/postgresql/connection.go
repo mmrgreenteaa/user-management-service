@@ -2,6 +2,8 @@ package postgresql
 
 import (
 	"log"
+	"log/slog"
+	"os"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -9,6 +11,7 @@ import (
 
 type DB struct {
 	*gorm.DB
+	logger slog.Logger
 }
 
 func Сonnect() *DB {
@@ -18,7 +21,7 @@ func Сonnect() *DB {
 	if err != nil {
 		log.Panic("error connect")
 	}
-
-	return &DB{db}
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	return &DB{db, *logger}
 
 }

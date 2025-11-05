@@ -2,9 +2,8 @@ package handlers
 
 import (
 	"context"
-	"time"
+	"log/slog"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/mmrgreenteaa/user-management-service/internal/gen/proto/auth"
 	"github.com/mmrgreenteaa/user-management-service/internal/gen/proto/user_manegement"
 	"google.golang.org/grpc/codes"
@@ -14,6 +13,7 @@ import (
 func (s *AuthServer) Login(ctx context.Context, req *auth.UserInfoRequest) (*auth.SignInUserResponse, error) {
 
 	if req.Login == "" || req.Password == "" || req.UserAgent == "" || req.Ip == "" {
+		s.logger.Error("empty values requst")
 		return nil, status.Error(codes.InvalidArgument, "empty values requst")
 	}
 
@@ -25,38 +25,29 @@ func (s *AuthServer) Login(ctx context.Context, req *auth.UserInfoRequest) (*aut
 	if err != nil {
 		st, ok := status.FromError(err)
 		if !ok {
+			s.logger.Error("unknow status VerifyCredentials func service user menagement")
 			return nil, status.Errorf(codes.Unknown, "user manegement service failed:%v", st.Message())
 		}
+		s.logger.Error("verifyCredentials fail ", slog.String("Error", err.Error()))
 		return nil, status.Errorf(st.Code(), "verify credentials failed: %v", st.Message())
 	}
-	refresh, err := GenerateRefreshToken()
+
+	tokens, err := CreateRefreshAcsessToken(res.UserId)
 	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to generate refresh token")
+		s.logger.Error("fail create tokens", slog.String("Error", err.Error()))
+		return nil, status.Errorf(codes.Internal, "faid create tokens - %v", err.Error())
 	}
 
-	err = s.Db.AddRefresh(refresh, req.UserAgent, req.Ip)
+	err = s.Db.AddRefresh(tokens.refresh, res.UserId, req.UserAgent, req.Ip)
 	if err != nil {
+		s.logger.Error("fail add refresg in db", slog.String("Error", err.Error()))
 		return nil, status.Error(codes.Internal, "failed to store refresh token")
 	}
 
-	access := jwt.NewWithClaims(jwt.SigningMethodHS512, jwt.MapClaims{
-		"user_id": res.UserId,
-		"exp":     time.Now().Add(15 * time.Minute).Unix(),
-	})
-
-	jwtAccess, err := access.SignedString([]byte(secretKey))
-	if err != nil {
-		return nil, status.Error(codes.Internal, "failed sing access tocken")
-	}
-
+	s.logger.Info("the login was successful")
 	return &auth.SignInUserResponse{
-		AccessToken:  jwtAccess,
-		RefreshToken: refresh,
+		AccessToken:  tokens.acsess,
+		RefreshToken: tokens.refresh,
 	}, nil
 
-}
-
-type tokens struct {
-	acsess  string
-	refresh string
 }

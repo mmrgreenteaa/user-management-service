@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"log"
+	"log/slog"
+	"os"
 
 	"github.com/mmrgreenteaa/user-management-service/internal/auth/datebase/postgresql"
 	"github.com/mmrgreenteaa/user-management-service/internal/gen/proto/auth"
@@ -14,6 +16,7 @@ type AuthServer struct {
 	auth.AuthServer
 	Db         postgresql.DB
 	UserClinet user_manegement.UserManagementClient
+	logger     *slog.Logger
 }
 
 var secretKey = "12333"
@@ -24,8 +27,11 @@ func NewAuthServer(db *postgresql.DB) *AuthServer {
 	if err != nil {
 		log.Fatal("fail to connct ")
 	}
+
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	return &AuthServer{
 		Db:         *db,
 		UserClinet: user_manegement.NewUserManagementClient(conn),
+		logger:     logger,
 	}
 }
