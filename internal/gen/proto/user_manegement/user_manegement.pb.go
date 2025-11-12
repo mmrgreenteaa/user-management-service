@@ -180,7 +180,7 @@ func (x *UserRegistrationReq) GetEmail() string {
 
 type UserLoginEditReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	OldLogin      string                 `protobuf:"bytes,1,opt,name=old_login,json=oldLogin,proto3" json:"old_login,omitempty"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	NewLogin      string                 `protobuf:"bytes,2,opt,name=new_login,json=newLogin,proto3" json:"new_login,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -216,9 +216,9 @@ func (*UserLoginEditReq) Descriptor() ([]byte, []int) {
 	return file_user_manegement_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *UserLoginEditReq) GetOldLogin() string {
+func (x *UserLoginEditReq) GetUserId() string {
 	if x != nil {
-		return x.OldLogin
+		return x.UserId
 	}
 	return ""
 }
@@ -230,27 +230,27 @@ func (x *UserLoginEditReq) GetNewLogin() string {
 	return ""
 }
 
-type LoginReq struct {
+type DeleteReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Login         string                 `protobuf:"bytes,1,opt,name=login,proto3" json:"login,omitempty"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *LoginReq) Reset() {
-	*x = LoginReq{}
+func (x *DeleteReq) Reset() {
+	*x = DeleteReq{}
 	mi := &file_user_manegement_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *LoginReq) String() string {
+func (x *DeleteReq) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*LoginReq) ProtoMessage() {}
+func (*DeleteReq) ProtoMessage() {}
 
-func (x *LoginReq) ProtoReflect() protoreflect.Message {
+func (x *DeleteReq) ProtoReflect() protoreflect.Message {
 	mi := &file_user_manegement_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -262,14 +262,14 @@ func (x *LoginReq) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use LoginReq.ProtoReflect.Descriptor instead.
-func (*LoginReq) Descriptor() ([]byte, []int) {
+// Deprecated: Use DeleteReq.ProtoReflect.Descriptor instead.
+func (*DeleteReq) Descriptor() ([]byte, []int) {
 	return file_user_manegement_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *LoginReq) GetLogin() string {
+func (x *DeleteReq) GetUserId() string {
 	if x != nil {
-		return x.Login
+		return x.UserId
 	}
 	return ""
 }
@@ -287,18 +287,18 @@ const file_user_manegement_proto_rawDesc = "" +
 	"\x13UserRegistrationReq\x12\x14\n" +
 	"\x05login\x18\x01 \x01(\tR\x05login\x12\x1a\n" +
 	"\bpassword\x18\x02 \x01(\tR\bpassword\x12\x14\n" +
-	"\x05email\x18\x03 \x01(\tR\x05email\"L\n" +
-	"\x10UserLoginEditReq\x12\x1b\n" +
-	"\told_login\x18\x01 \x01(\tR\boldLogin\x12\x1b\n" +
-	"\tnew_login\x18\x02 \x01(\tR\bnewLogin\" \n" +
-	"\bLoginReq\x12\x14\n" +
-	"\x05login\x18\x01 \x01(\tR\x05login2\xea\x04\n" +
+	"\x05email\x18\x03 \x01(\tR\x05email\"H\n" +
+	"\x10UserLoginEditReq\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1b\n" +
+	"\tnew_login\x18\x02 \x01(\tR\bnewLogin\"$\n" +
+	"\tDeleteReq\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId2\xeb\x04\n" +
 	"\x0eUserManagement\x12\xcc\x01\n" +
 	"\x11VerifyCredentials\x12Y.github.com.mmrgreenteaa.user.management.service.interal.user_manegement.UserValidRequest\x1aZ.github.com.mmrgreenteaa.user.management.service.interal.user_manegement.UserValidResponse\"\x00\x12\x8a\x01\n" +
 	"\x10RegistrationUser\x12\\.github.com.mmrgreenteaa.user.management.service.interal.user_manegement.UserRegistrationReq\x1a\x16.google.protobuf.Empty\"\x00\x12\x80\x01\n" +
-	"\tEditLogin\x12Y.github.com.mmrgreenteaa.user.management.service.interal.user_manegement.UserLoginEditReq\x1a\x16.google.protobuf.Empty\"\x00\x12y\n" +
+	"\tEditLogin\x12Y.github.com.mmrgreenteaa.user.management.service.interal.user_manegement.UserLoginEditReq\x1a\x16.google.protobuf.Empty\"\x00\x12z\n" +
 	"\n" +
-	"DeleteUser\x12Q.github.com.mmrgreenteaa.user.management.service.interal.user_manegement.LoginReq\x1a\x16.google.protobuf.Empty\"\x00B]Z[github.com/mmrgreenteaa/user-management-service/interal/gen/user_manegement;user_manegementb\x06proto3"
+	"DeleteUser\x12R.github.com.mmrgreenteaa.user.management.service.interal.user_manegement.DeleteReq\x1a\x16.google.protobuf.Empty\"\x00B]Z[github.com/mmrgreenteaa/user-management-service/interal/gen/user_manegement;user_manegementb\x06proto3"
 
 var (
 	file_user_manegement_proto_rawDescOnce sync.Once
@@ -318,14 +318,14 @@ var file_user_manegement_proto_goTypes = []any{
 	(*UserValidResponse)(nil),   // 1: github.com.mmrgreenteaa.user.management.service.interal.user_manegement.UserValidResponse
 	(*UserRegistrationReq)(nil), // 2: github.com.mmrgreenteaa.user.management.service.interal.user_manegement.UserRegistrationReq
 	(*UserLoginEditReq)(nil),    // 3: github.com.mmrgreenteaa.user.management.service.interal.user_manegement.UserLoginEditReq
-	(*LoginReq)(nil),            // 4: github.com.mmrgreenteaa.user.management.service.interal.user_manegement.LoginReq
+	(*DeleteReq)(nil),           // 4: github.com.mmrgreenteaa.user.management.service.interal.user_manegement.DeleteReq
 	(*emptypb.Empty)(nil),       // 5: google.protobuf.Empty
 }
 var file_user_manegement_proto_depIdxs = []int32{
 	0, // 0: github.com.mmrgreenteaa.user.management.service.interal.user_manegement.UserManagement.VerifyCredentials:input_type -> github.com.mmrgreenteaa.user.management.service.interal.user_manegement.UserValidRequest
 	2, // 1: github.com.mmrgreenteaa.user.management.service.interal.user_manegement.UserManagement.RegistrationUser:input_type -> github.com.mmrgreenteaa.user.management.service.interal.user_manegement.UserRegistrationReq
 	3, // 2: github.com.mmrgreenteaa.user.management.service.interal.user_manegement.UserManagement.EditLogin:input_type -> github.com.mmrgreenteaa.user.management.service.interal.user_manegement.UserLoginEditReq
-	4, // 3: github.com.mmrgreenteaa.user.management.service.interal.user_manegement.UserManagement.DeleteUser:input_type -> github.com.mmrgreenteaa.user.management.service.interal.user_manegement.LoginReq
+	4, // 3: github.com.mmrgreenteaa.user.management.service.interal.user_manegement.UserManagement.DeleteUser:input_type -> github.com.mmrgreenteaa.user.management.service.interal.user_manegement.DeleteReq
 	1, // 4: github.com.mmrgreenteaa.user.management.service.interal.user_manegement.UserManagement.VerifyCredentials:output_type -> github.com.mmrgreenteaa.user.management.service.interal.user_manegement.UserValidResponse
 	5, // 5: github.com.mmrgreenteaa.user.management.service.interal.user_manegement.UserManagement.RegistrationUser:output_type -> google.protobuf.Empty
 	5, // 6: github.com.mmrgreenteaa.user.management.service.interal.user_manegement.UserManagement.EditLogin:output_type -> google.protobuf.Empty

@@ -2,8 +2,9 @@ package handlers
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	authpb "github.com/mmrgreenteaa/user-management-service/internal/gen/proto/auth"
@@ -12,12 +13,13 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func (gatway *ApiGatway) LogIn(c *gin.Context) {
+const (
+	refreshTokenMaxAge = 48 * time.Hour
+	cookiePath         = "/"
+)
 
-	if gatway == nil || gatway.AuthServis == nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "service unavailable"})
-		return
-	}
+func (apgt *ApiGatway) LogIn(c *gin.Context) {
+
 	type user struct {
 		Login string `json:"login"`
 		Pass  string `json:"password"`
@@ -25,195 +27,229 @@ func (gatway *ApiGatway) LogIn(c *gin.Context) {
 	var useReq user
 
 	if err := c.ShouldBindJSON(&useReq); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "incorrect data"})
 		return
 	}
-	//log.Println(useReq)
+
 	req := authpb.UserInfoRequest{
-		Login:    useReq.Login,
-		Password: useReq.Pass,
+		Login:     useReq.Login,
+		Password:  useReq.Pass,
+		UserAgent: c.Request.UserAgent(),
+		Ip:        c.ClientIP(),
 	}
-	res, err := gatway.AuthServis.Login(context.Background(), &req)
+	res, err := apgt.AuthServis.Login(c.Request.Context(), &req)
+	apgt.logger.Debug("login attempt", slog.String("login", req.Login))
 	if err != nil {
 		st, ok := status.FromError(err)
 		if !ok {
-			log.Fatalf("неизвестная ошибка: %v", err)
+			apgt.logger.Error("non-gRPC error during login", slog.String("error", err.Error()))
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
+			return
 		}
+
+		apgt.logger.Warn("login failed",
+			slog.String("grpc_code", st.Code().String()),
+			slog.String("message", st.Message()))
 		switch st.Code() {
 		case codes.Internal:
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
-			log.Println("Здесь лшибка ")
-			c.Abort()
+			return
 		case codes.InvalidArgument:
-			c.JSON(
-				http.StatusBadRequest,
-				gin.H{"error": "invalid data"},
-			)
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "login or password not specific",
+			})
+			return
+
+		case codes.Unauthenticated:
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "invalid login or password",
+			})
+			return
 		case codes.Unavailable:
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "The service is temporarily unavailable:",
+				"error": "the service is temporarily unavailable:",
 			})
-			log.Println("Сервис временно недоступен:", st.Message())
-		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "unexpected error"})
+			return
 		}
 
 	}
 	c.Header("Authorization", res.AccessToken)
 	c.SetCookie("refresh_token", res.RefreshToken,
-		172800,      // maxAge: 2 дня (в секундах)
-		"/",         // путь
-		"localhost", // домен (или "")
-		false,       // Secure — только по HTTPS
-		false,       // HttpOnly — для защиты от XSS
+		int(refreshTokenMaxAge.Seconds()),
+		cookiePath,
+		"localhost",
+		false, // Secure — только по HTTPS
+		false, // HttpOnly — для защиты от XSS
 	)
-	c.JSON(http.StatusOK, gin.H{
-		"message":      "login successful",
-		"access_token": res.AccessToken,
-	})
+	c.JSON(http.StatusOK, nil)
 }
 
-func (apiGtwy ApiGatway) AuthMiddleware() gin.HandlerFunc {
+func (apgt ApiGatway) AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := c.GetHeader("Authorization")
 		if token == "" {
+			apgt.logger.Warn("there is no access token")
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "Требуется токен авторизации",
+				"error": "authorization token is required",
 			})
-			c.Abort()
 			return
 		}
 		req := authpb.AccessRequest{
 			Token: token,
 		}
-		_, err := apiGtwy.AuthServis.VerificatAccess(context.Background(), &req)
+		res, err := apgt.AuthServis.VerifyAccess(context.Background(), &req)
 		if err != nil {
-			log.Println(err)
 			st, ok := status.FromError(err)
 			if !ok {
-				log.Fatalf("неизвестная ошибка: %v", err)
+				apgt.logger.Error("non-gRPC error during auth", slog.String("error", err.Error()))
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
+				return
 			}
+
+			apgt.logger.Warn("auth failed",
+				slog.String("grpc_code", st.Code().String()),
+				slog.String("message", st.Message()))
+
 			switch st.Code() {
 			case codes.Internal:
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
-				c.Abort()
-			case codes.InvalidArgument:
-				c.JSON(http.StatusBadRequest, gin.H{
-					"error": "The token is not valid",
-				})
-				c.Abort()
-				log.Println("error valid:", st.Message())
+				return
 
 			case codes.Unauthenticated:
 				c.JSON(http.StatusUnauthorized, gin.H{
-					"error": "Invalid or expired token",
+					"error": "invalid or expired token",
 				})
-
+				return
 			case codes.Unavailable:
 				c.JSON(http.StatusInternalServerError, gin.H{
-					"error": "The service is temporarily unavailable:",
+					"error": "the service is temporarily unavailable:",
 				})
-				log.Println("Сервис временно недоступен:", st.Message())
+				return
 			}
 		}
+		c.Set("user_id", res.UserId)
 
 	}
 }
 
-func (apiGtwy *ApiGatway) RefreshToken(c *gin.Context) {
+func (apgt *ApiGatway) RefreshToken(c *gin.Context) {
 
 	access := c.GetHeader("Authorization")
 	if access == "" {
+		apgt.logger.Warn("access token not found")
 		c.JSON(http.StatusUnauthorized, gin.H{
-			"error": "Требуется токен авторизации",
+			"error": "authorization token is required",
 		})
-		c.Abort()
 		return
 	}
 	ref, err := c.Cookie("refresh_token")
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
+		apgt.logger.Error("refresh token cookie not found")
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "refresh cookie not found",
 		})
+		return
 	}
-	req := authpb.RefreshRequst{
+	req := authpb.RefreshRequest{
 		RefreshToken: ref,
+		UserAgent:    c.Request.UserAgent(),
+		Ip:           c.ClientIP(),
 	}
-	ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", access)
-	res, err := apiGtwy.AuthServis.RefreshToken(ctx, &req)
+	ctx := metadata.AppendToOutgoingContext(c.Request.Context(), "Authorization", access)
+	res, err := apgt.AuthServis.RefreshToken(ctx, &req)
 	if err != nil {
 		st, ok := status.FromError(err)
 		if !ok {
-			log.Fatalf("unknown error: %v", err)
+			apgt.logger.Error("non-gRPC error during auth", slog.String("error", err.Error()))
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
+			return
 		}
+
+		apgt.logger.Warn("refresh failed",
+			slog.String("grpc_code", st.Code().String()),
+			slog.String("message", st.Message()))
+
 		switch st.Code() {
 		case codes.Internal:
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
-			c.Abort()
+			return
 		case codes.InvalidArgument:
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": "The tokens is not valid",
 			})
-			c.Abort()
-			log.Println("error valid:", st.Message())
+			return
 
 		case codes.Unauthenticated:
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "Invalid or expired tokens",
+				"error": "Invalid or expired tokens, tokens delete",
 			})
+			deleteCookieHandler(c)
+			apgt.logger.Info("refresh token delete cookie")
+			return
 
 		case codes.Unavailable:
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "The service is temporarily unavailable:",
+				"error": "the service is temporarily unavailable:",
 			})
-			log.Println("Сервис временно недоступен:", st.Message())
+			return
 		}
 
 	}
 	c.Header("Authorization", res.AccessToken)
 	c.SetCookie("refresh_token", res.RefreshToken,
-		172800,      // maxAge: 2 дня (в секундах)
-		"/",         // путь
-		"localhost", // домен (или "")
-		false,       // Secure — только по HTTPS
-		false,       // HttpOnly — для защиты от XSS
+		int(refreshTokenMaxAge), // maxAge: 2 дня (в секундах)
+		cookiePath,              // путь
+		"localhost",             // домен (или "")
+		false,                   // Secure — только по HTTPS
+		false,                   // HttpOnly — для защиты от XSS
 	)
 
 }
 
-func (apiGtwy *ApiGatway) LogOut(c *gin.Context) {
+func (apgt *ApiGatway) LogOut(c *gin.Context) {
 
 	ref, err := c.Cookie("refresh_token")
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
+		apgt.logger.Error("refresh token cookie not found")
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "refresh cookie not found",
 		})
 		return
 	}
 	if ref == "" {
+		apgt.logger.Error("empty refresh token ")
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "empty refresh token",
 		})
 		return
 	}
-	c.SetCookie("refresh_token", "", -1, "/", "yourdomain.com", true, true)
-	req := authpb.RefreshRequst{
+	deleteCookieHandler(c)
+
+	req := authpb.LogoutRequest{
 		RefreshToken: ref,
+		UserAgent:    c.Request.UserAgent(),
+		Ip:           c.ClientIP(),
 	}
-	_, err = apiGtwy.AuthServis.LogOut(c.Request.Context(), &req)
+	ctx := metadata.AppendToOutgoingContext(c.Request.Context())
+	_, err = apgt.AuthServis.Logout(ctx, &req)
 	if err != nil {
 		st, ok := status.FromError(err)
 		if !ok {
+			apgt.logger.Error("non-gRPC error during auth", slog.String("error", err.Error()))
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
 			return
 		}
+
+		apgt.logger.Warn("logout failed",
+			slog.String("grpc_code", st.Code().String()),
+			slog.String("message", st.Message()))
 		switch st.Code() {
 		case codes.Internal:
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
 			return
 		case codes.InvalidArgument:
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "The tokens is not valid",
+				"error": "the tokens is not valid",
 			})
 			return
 
@@ -229,5 +265,16 @@ func (apiGtwy *ApiGatway) LogOut(c *gin.Context) {
 			return
 		}
 	}
+
+}
+
+func deleteCookieHandler(c *gin.Context) {
+	c.SetCookie("refresh_token", "refresh_token",
+		-1,          // maxAge: 2 дня (в секундах)
+		cookiePath,  // путь
+		"localhost", // домен (или "")
+		false,       // Secure — только по HTTPS
+		false,       // HttpOnly — для защиты от XSS
+	)
 
 }

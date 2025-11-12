@@ -4,10 +4,8 @@ import (
 	"context"
 	"log"
 	"log/slog"
-	"math/rand"
 	"net"
 	"os"
-	"strconv"
 	"testing"
 
 	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/auth"
@@ -40,7 +38,7 @@ func (f *fakeClinetServ) RegistrationUser(ctx context.Context, in *userManegemen
 func (f *fakeClinetServ) EditLogin(ctx context.Context, in *userManegementpb.UserLoginEditReq, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	return nil, nil
 }
-func (f *fakeClinetServ) DeleteUser(ctx context.Context, in *userManegementpb.LoginReq, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (f *fakeClinetServ) DeleteUser(ctx context.Context, in *userManegementpb.DeleteReq, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	return nil, nil
 }
 
@@ -53,7 +51,13 @@ func TestGenerateRefreshToken(t *testing.T) {
 
 }
 
-func setupTestServer() (*grpc.Server, net.Listener) {
+type testSetup struct {
+	gprcServ *grpc.Server
+	lis      net.Listener
+	service  *AuthServer
+}
+
+func setupTestServer() *testSetup {
 
 	lis, err := net.Listen("tcp", ":0")
 	if err != nil {
@@ -71,7 +75,11 @@ func setupTestServer() (*grpc.Server, net.Listener) {
 	genAuth.RegisterAuthServer(grpcServer, s)
 
 	go grpcServer.Serve(lis)
-	return grpcServer, lis
+	return &testSetup{
+		gprcServ: grpcServer,
+		lis:      lis,
+		service:  s,
+	}
 }
 
 func setupTestServerMiddleWare() (*grpc.Server, net.Listener) {
@@ -88,68 +96,21 @@ func setupTestServerMiddleWare() (*grpc.Server, net.Listener) {
 	}
 
 	grpcServer := grpc.NewServer(grpc.UnaryInterceptor(grpc_auth.UnaryServerInterceptor(s.CheckJWT)))
-	//	grpcServer := grpc.NewServer(grpc.UnaryInterceptor())
 	genAuth.RegisterAuthServer(grpcServer, s)
 
 	go grpcServer.Serve(lis)
 	return grpcServer, lis
 }
 
-func TestMiddleWare(t *testing.T) {
-
-	grpcServer, lis := setupTestServerMiddleWare()
-	defer grpcServer.Stop()
-	conn, err := grpc.NewClient(lis.Addr().String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
-
-	require.NoError(t, err, "")
-	defer conn.Close()
-	clinet := genAuth.NewTestServiceClient(conn)
-
-	tokens, err := CreateRefreshAcsessToken(strconv.Itoa(rand.Int()))
-	tests := []struct {
-		name         string
-		token        string
-		expectedCode codes.Code
-		description  string
-	}{
-		{
-			name:         "Success_ValidToken",
-			token:        tokens.acsess,
-			expectedCode: codes.OK,
-			description:  "A valid access token should pass the middleware",
-		},
-		{
-			name:         "Failure_InvalidToken",
-			token:        "this-is-not-a-valid-jwt",
-			expectedCode: codes.Unauthenticated,
-			description:  "An invalid token should be rejected with Unauthenticated code",
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-
-			md := metadata.Pairs("authorization", test.token)
-			ctx := metadata.NewOutgoingContext(context.Background(), md)
-			_, err = clinet.EmptyCall(ctx, &emptypb.Empty{})
-			st, ok := status.FromError(err)
-			require.True(t, ok, "Expected a gRPC status error, but got a different error type")
-
-			assert.Equal(t, test.expectedCode, st.Code(), test.description)
-
-		})
-	}
-
-}
-
 func TestRefresh(t *testing.T) {
 
-	grpcServer, lis := setupTestServerMiddleWare()
+	setup := setupTestServer()
 
 	t.Cleanup(func() {
-		grpcServer.Stop()
+		setup.gprcServ.Stop()
 	})
 
-	conn, err := grpc.NewClient(lis.Addr().String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(setup.lis.Addr().String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		conn.Close()
@@ -188,13 +149,13 @@ func TestRefresh(t *testing.T) {
 			expectedCode: codes.OK,
 			description:  "A valid refresh token should successfully update tokens",
 		},
-		/* 		{
+		{
 			name:         "Failure_InvalidToken",
 			accsess:      "invalid-access-token",
 			refresh:      "invalid-refresh-token",
 			expectedCode: codes.Unauthenticated,
 			description:  "An invalid refresh token should be rejected",
-		}, */
+		},
 	}
 
 	for _, test := range tests {
@@ -227,37 +188,69 @@ func TestRefresh(t *testing.T) {
 				assert.NotEqual(t, test.refresh, resRef.RefreshToken, "The refresh token should have been updated")
 			}
 		})
+
 	}
 }
 
-/* func TestLogOut(t *testing.T) {
+func TestLogOut(t *testing.T) {
 
-	grpcServer, lis := setupTestServer()
-	defer grpcServer.Stop()
-	conn, err := grpc.NewClient(lis.Addr().String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	setup := setupTestServer()
+	defer setup.gprcServ.Stop()
+	conn, err := grpc.NewClient(setup.lis.Addr().String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	require.NoError(t, err)
 	defer conn.Close()
 
 	clinet := genAuth.NewAuthClient(conn)
 	require.NoError(t, err)
-	tokens, err := CreateRefreshAcsessToken()
+	tokens, err := CreateRefreshAcsessToken(userId)
 	require.NoError(t, err)
-	s := &AuthServer{
-		Db: *postgresql.Сonnect(),
+	failTokens, err := CreateRefreshAcsessToken("3434")
+	require.NoError(t, err)
+
+	tests := []struct {
+		name         string
+		accsess      string
+		refresh      string
+		expectedCode codes.Code
+		description  string
+	}{
+		{
+			name:         "success_Logout",
+			accsess:      tokens.acsess,
+			refresh:      tokens.refresh,
+			expectedCode: codes.OK,
+			description:  "A valid refresh token should successfully update tokens",
+		},
+		{
+			name:         "fail_logout",
+			accsess:      failTokens.acsess,
+			refresh:      failTokens.refresh,
+			expectedCode: codes.Unauthenticated,
+			description:  "An invalid refresh token should be rejected",
+		},
 	}
-	s.Db.AddRefresh(tokens.refresh, "Test", "Test")
-	md := metadata.Pairs("authorization", tokens.acsess)
-	ctx := metadata.NewOutgoingContext(context.Background(), md)
-	req := auth.RefreshRequst{RefreshToken: tokens.refresh}
-	_, err = clinet.LogOut(ctx, &req)
-	assert.NoError(t, err)
-} */
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			setup.service.Db.AddRefresh(tokens.refresh, "Test", "Test", "Test")
+			md := metadata.Pairs("authorization", test.accsess)
+			ctx := metadata.NewOutgoingContext(context.Background(), md)
+			req := genAuth.LogoutRequest{
+				RefreshToken: test.refresh,
+				UserAgent:    "Test",
+				Ip:           "Test",
+			}
+			_, err = clinet.Logout(ctx, &req)
+			assert.NoError(t, err)
+		})
+	}
+
+}
 
 func TestLogin(t *testing.T) {
 
-	grpcServer, lis := setupTestServer()
-	defer grpcServer.Stop()
-	conn, err := grpc.NewClient(lis.Addr().String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	setup := setupTestServer()
+	defer setup.gprcServ.Stop()
+	conn, err := grpc.NewClient(setup.lis.Addr().String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 
 	require.NoError(t, err, "")
 	defer conn.Close()
@@ -265,8 +258,10 @@ func TestLogin(t *testing.T) {
 	client := genAuth.NewAuthClient(conn)
 
 	req := genAuth.UserInfoRequest{
-		Login:    "Test",
-		Password: "Test",
+		Login:     "Test",
+		Password:  "Test",
+		UserAgent: "Test",
+		Ip:        "Test",
 	}
 
 	res, err := client.Login(context.Background(), &req)
@@ -274,5 +269,14 @@ func TestLogin(t *testing.T) {
 	if res.AccessToken == "" {
 		assert.Fail(t, "AccessToken the empty")
 	}
+	reqlog := genAuth.LogoutRequest{
+		RefreshToken: res.RefreshToken,
+		UserAgent:    "Test",
+		Ip:           "Test",
+	}
+	md := metadata.Pairs("authorization", res.AccessToken)
+	ctx := metadata.NewOutgoingContext(context.Background(), md)
+	_, err = client.Logout(ctx, &reqlog)
 	log.Println(res)
+
 }

@@ -14,7 +14,7 @@ import (
 
 func (s *AuthServer) RefreshToken(ctx context.Context, refresh *auth.RefreshRequest) (*auth.SignInUserResponse, error) {
 
-	userId, ok := ctx.Value(userIdJwt).(string)
+	userId, ok := ctx.Value(UserIdJwt).(string)
 	if !ok {
 		s.logger.Error("userid was not found in the context")
 		return nil, status.Error(codes.Internal, "failed provided user id")

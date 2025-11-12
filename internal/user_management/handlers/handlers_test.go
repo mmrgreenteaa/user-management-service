@@ -2,8 +2,11 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"log/slog"
 	"net"
+	"os"
 	"testing"
 
 	pb "github.com/mmrgreenteaa/user-management-service/internal/gen/proto/user_manegement"
@@ -15,49 +18,92 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-func setSetupServer() (*grpc.Server, net.Listener) {
+type testSetup struct {
+	lis           net.Listener
+	grpcServer    *grpc.Server
+	MedgerService *UserManagementServer
+}
+
+var id string
+
+const loginT = "test"
+const passT = "test"
+
+func setSetupServer() *testSetup {
 	lis, err := net.Listen("tcp", ":0")
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 	}
 
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	s := &UserManagementServer{
-		DB: mongodb.Сonnect(),
+		Db:     mongodb.Сonnect(),
+		logger: logger,
 	}
 
 	grpcServer := grpc.NewServer()
 
-	pb.RegisterUserManegementServer(grpcServer, s)
+	pb.RegisterUserManagementServer(grpcServer, s)
 	go grpcServer.Serve(lis)
-	return grpcServer, lis
+	return &testSetup{
+		grpcServer:    grpcServer,
+		lis:           lis,
+		MedgerService: s,
+	}
+}
+
+func AddTestDate(ts *testSetup) error {
+
+	err := ts.MedgerService.Db.AddUser(loginT, passT)
+	if err != nil {
+		return err
+	}
+	id, err = ts.MedgerService.Db.GetUserId(loginT, passT)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func DeleteTestDate(ts *testSetup) error {
+	if id == "" {
+		return fmt.Errorf("id ")
+	}
+	err := ts.MedgerService.Db.DeleteUser(id)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func TestGetUserId(t *testing.T) {
-	grpcServer, lis := setSetupServer()
-	defer grpcServer.Stop()
-	conn, err := grpc.NewClient(lis.Addr().String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	testSetup := setSetupServer()
+	defer testSetup.grpcServer.Stop()
+	conn, err := grpc.NewClient(testSetup.lis.Addr().String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 
 	require.NoError(t, err)
 	defer conn.Close()
 
-	clinet := pb.NewUserManegementClient(conn)
+	clinet := pb.NewUserManagementClient(conn)
 
+	err = AddTestDate(testSetup)
+	require.NoError(t, err)
 	tests := []struct {
 		name  string
-		input pb.UserValidRequst
+		input pb.UserValidRequest
 		err   error
 	}{
 		{
 			name: "ok",
-			input: pb.UserValidRequst{
-				Login:    "vadim",
-				Password: "123",
+			input: pb.UserValidRequest{
+				Login:    loginT,
+				Password: passT,
 			},
 			err: nil,
 		},
 		{
 			name: "user not found",
-			input: pb.UserValidRequst{
+			input: pb.UserValidRequest{
 				Login:    "Testd",
 				Password: "Test",
 			},
@@ -79,18 +125,20 @@ func TestGetUserId(t *testing.T) {
 		})
 
 	}
+	err = DeleteTestDate(testSetup)
+	require.NoError(t, err)
 
 }
 
 func TestRegistrationUser(t *testing.T) {
-	grpcServer, lis := setSetupServer()
-	defer grpcServer.Stop()
-	conn, err := grpc.NewClient(lis.Addr().String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	testSetup := setSetupServer()
+	defer testSetup.grpcServer.Stop()
+	conn, err := grpc.NewClient(testSetup.lis.Addr().String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 
 	require.NoError(t, err)
 	defer conn.Close()
 
-	clinet := pb.NewUserManegementClient(conn)
+	clinet := pb.NewUserManagementClient(conn)
 
 	tests := []struct {
 		name  string
@@ -100,8 +148,8 @@ func TestRegistrationUser(t *testing.T) {
 		{
 			name: "ok",
 			input: pb.UserRegistrationReq{
-				Login: "vadim2",
-				Pass:  "vadim2",
+				Login:    loginT,
+				Password: passT,
 			},
 			err: nil,
 		},
@@ -121,17 +169,21 @@ func TestRegistrationUser(t *testing.T) {
 		})
 
 	}
-
+	err = DeleteTestDate(testSetup)
+	require.NoError(t, err)
 }
 
 func TestEditLogin(t *testing.T) {
-	grpcServer, lis := setSetupServer()
-	defer grpcServer.Stop()
-	conn, err := grpc.NewClient(lis.Addr().String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	testSetup := setSetupServer()
+	defer testSetup.grpcServer.Stop()
+	conn, err := grpc.NewClient(testSetup.lis.Addr().String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	require.NoError(t, err)
 	defer conn.Close()
 
-	clinet := pb.NewUserManegementClient(conn)
+	clinet := pb.NewUserManagementClient(conn)
+
+	err = AddTestDate(testSetup)
+	require.NoError(t, err)
 
 	tests := []struct {
 		name  string
@@ -141,7 +193,7 @@ func TestEditLogin(t *testing.T) {
 		{
 			name: "ok",
 			input: pb.UserLoginEditReq{
-				OldLogin: "vadim2",
+				UserId:   "30",
 				NewLogin: "vadim3",
 			},
 			err: nil,
@@ -162,28 +214,32 @@ func TestEditLogin(t *testing.T) {
 		})
 
 	}
-
+	err = DeleteTestDate(testSetup)
+	require.NoError(t, err)
 }
 
 func TestDeleteUser(t *testing.T) {
 
-	grpcServer, lis := setSetupServer()
-	defer grpcServer.Stop()
-	conn, err := grpc.NewClient(lis.Addr().String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	testSetup := setSetupServer()
+	defer testSetup.grpcServer.Stop()
+	conn, err := grpc.NewClient(testSetup.lis.Addr().String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	require.NoError(t, err)
 	defer conn.Close()
 
-	clinet := pb.NewUserManegementClient(conn)
+	clinet := pb.NewUserManagementClient(conn)
+
+	err = AddTestDate(testSetup)
+	require.NoError(t, err)
 
 	tests := []struct {
 		name  string
-		input pb.LoginReq
+		input pb.DeleteReq
 		err   error
 	}{
 		{
 			name: "ok",
-			input: pb.LoginReq{
-				Login: "vadim",
+			input: pb.DeleteReq{
+				UserId: "300",
 			},
 			err: nil,
 		},

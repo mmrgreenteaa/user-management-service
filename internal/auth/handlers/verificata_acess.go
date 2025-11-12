@@ -17,7 +17,7 @@ import (
 
 type userIdKeyType struct{}
 
-var userIdJwt userIdKeyType
+var UserIdJwt userIdKeyType
 
 func (s *AuthServer) VerificatAccess(ctx context.Context, access *auth.AccessRequest) (*emptypb.Empty, error) {
 	token, err := jwt.Parse(access.Token, func(t *jwt.Token) (any, error) {
@@ -73,7 +73,7 @@ func (s AuthServer) CheckJWT(ctx context.Context) (context.Context, error) {
 		s.logger.Error("failed get context:")
 		return nil, status.Errorf(codes.Internal, "failed get context:")
 	}
-	tokens := md.Get("authorization")
+	tokens := md.Get("Authorization")
 
 	token, err := jwt.Parse(tokens[0], func(t *jwt.Token) (any, error) {
 		if t.Method != jwt.SigningMethodHS512 {
@@ -113,6 +113,6 @@ func (s AuthServer) CheckJWT(ctx context.Context) (context.Context, error) {
 		s.logger.Error("token isa expired", slog.String("Access token", tokens[0]))
 		return nil, status.Error(codes.Unauthenticated, "token isa expired")
 	}
-	newCtx := context.WithValue(ctx, userIdJwt, requid)
+	newCtx := context.WithValue(ctx, UserIdJwt, requid)
 	return newCtx, nil
 }

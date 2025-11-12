@@ -14,6 +14,7 @@ import (
 )
 
 var ErrUserAgentMismatch = errors.New("the user agent does not match")
+var NoRecord = errors.New("no record found")
 
 func (db *DB) AddRefresh(refresh string, userId string, userAgent string, ip string) error {
 
@@ -78,7 +79,7 @@ func (db *DB) EditRefreshToken(tokenId string, newRefresh string) error {
 		return fmt.Errorf("fail update refresh token - %w", res.Error)
 	} else {
 		if res.RowsAffected == 0 {
-			log.Printf("Обновление не затронуло ни одной записи")
+			db.logger.Warn("falied edit refresh roken no record found")
 			return fmt.Errorf("no row affcted ")
 		}
 
@@ -90,7 +91,12 @@ func (db *DB) DeleteToken(id string) error {
 
 	res := db.Where("id = ?", id).Delete(&models.RefreshToken{})
 	if res.Error != nil {
+
 		return fmt.Errorf("fail refresh token delete: %w", res.Error)
+	}
+	if res.RowsAffected == 0 {
+
+		return NoRecord
 	}
 	return nil
 }

@@ -6,14 +6,14 @@ import (
 	"os"
 
 	"github.com/mmrgreenteaa/user-management-service/internal/auth/datebase/postgresql"
-	"github.com/mmrgreenteaa/user-management-service/internal/gen/proto/auth"
+	pb "github.com/mmrgreenteaa/user-management-service/internal/gen/proto/auth"
 	"github.com/mmrgreenteaa/user-management-service/internal/gen/proto/user_manegement"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
 type AuthServer struct {
-	auth.AuthServer
+	pb.AuthServer
 	Db         postgresql.DB
 	UserClinet user_manegement.UserManagementClient
 	logger     *slog.Logger

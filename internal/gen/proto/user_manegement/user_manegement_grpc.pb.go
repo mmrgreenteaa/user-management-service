@@ -33,7 +33,7 @@ type UserManagementClient interface {
 	VerifyCredentials(ctx context.Context, in *UserValidRequest, opts ...grpc.CallOption) (*UserValidResponse, error)
 	RegistrationUser(ctx context.Context, in *UserRegistrationReq, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	EditLogin(ctx context.Context, in *UserLoginEditReq, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	DeleteUser(ctx context.Context, in *LoginReq, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	DeleteUser(ctx context.Context, in *DeleteReq, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type userManagementClient struct {
@@ -74,7 +74,7 @@ func (c *userManagementClient) EditLogin(ctx context.Context, in *UserLoginEditR
 	return out, nil
 }
 
-func (c *userManagementClient) DeleteUser(ctx context.Context, in *LoginReq, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (c *userManagementClient) DeleteUser(ctx context.Context, in *DeleteReq, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, UserManagement_DeleteUser_FullMethodName, in, out, cOpts...)
@@ -91,7 +91,7 @@ type UserManagementServer interface {
 	VerifyCredentials(context.Context, *UserValidRequest) (*UserValidResponse, error)
 	RegistrationUser(context.Context, *UserRegistrationReq) (*emptypb.Empty, error)
 	EditLogin(context.Context, *UserLoginEditReq) (*emptypb.Empty, error)
-	DeleteUser(context.Context, *LoginReq) (*emptypb.Empty, error)
+	DeleteUser(context.Context, *DeleteReq) (*emptypb.Empty, error)
 	mustEmbedUnimplementedUserManagementServer()
 }
 
@@ -111,7 +111,7 @@ func (UnimplementedUserManagementServer) RegistrationUser(context.Context, *User
 func (UnimplementedUserManagementServer) EditLogin(context.Context, *UserLoginEditReq) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method EditLogin not implemented")
 }
-func (UnimplementedUserManagementServer) DeleteUser(context.Context, *LoginReq) (*emptypb.Empty, error) {
+func (UnimplementedUserManagementServer) DeleteUser(context.Context, *DeleteReq) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteUser not implemented")
 }
 func (UnimplementedUserManagementServer) mustEmbedUnimplementedUserManagementServer() {}
@@ -190,7 +190,7 @@ func _UserManagement_EditLogin_Handler(srv interface{}, ctx context.Context, dec
 }
 
 func _UserManagement_DeleteUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(LoginReq)
+	in := new(DeleteReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -202,7 +202,7 @@ func _UserManagement_DeleteUser_Handler(srv interface{}, ctx context.Context, de
 		FullMethod: UserManagement_DeleteUser_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UserManagementServer).DeleteUser(ctx, req.(*LoginReq))
+		return srv.(UserManagementServer).DeleteUser(ctx, req.(*DeleteReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }

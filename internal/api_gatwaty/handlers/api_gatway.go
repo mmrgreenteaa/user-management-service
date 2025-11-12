@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"log"
+	"log/slog"
 
 	authpb "github.com/mmrgreenteaa/user-management-service/internal/gen/proto/auth"
 	usermepb "github.com/mmrgreenteaa/user-management-service/internal/gen/proto/user_manegement"
@@ -10,8 +11,10 @@ import (
 )
 
 type ApiGatway struct {
-	UserMenedger usermepb.UserManegementClient
+	UserMenedger usermepb.UserManagementClient
 	AuthServis   authpb.AuthClient
+	logger       *slog.Logger
+	userid       string
 }
 
 func NewApiGatwaty() (*ApiGatway, error) {
@@ -26,7 +29,7 @@ func NewApiGatwaty() (*ApiGatway, error) {
 	if err != nil {
 		log.Fatal("fail to connct ")
 	}
-	uClient := usermepb.NewUserManegementClient(uConn)
+	uClient := usermepb.NewUserManagementClient(uConn)
 	return &ApiGatway{
 		AuthServis:   aClient,
 		UserMenedger: uClient,

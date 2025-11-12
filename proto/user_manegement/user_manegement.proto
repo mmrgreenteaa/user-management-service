@@ -22,17 +22,17 @@ message UserRegistrationReq{
 }
 
 message UserLoginEditReq{
-    string old_login = 1;
+    string user_id = 1;
     string new_login = 2;  
 }
 
-message LoginReq{ 
-    string login = 1;  
+message DeleteReq{ 
+    string user_id = 1;  
 }
 
 service UserManagement{ 
     rpc VerifyCredentials(UserValidRequest) returns (UserValidResponse){}
     rpc RegistrationUser(UserRegistrationReq) returns (google.protobuf.Empty){}
     rpc EditLogin(UserLoginEditReq) returns (google.protobuf.Empty){}
-    rpc DeleteUser(LoginReq) returns (google.protobuf.Empty){}
+    rpc DeleteUser(DeleteReq) returns (google.protobuf.Empty){}
 };
