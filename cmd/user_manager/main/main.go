@@ -7,23 +7,30 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/mmrgreenteaa/user-management-service/config"
 	usermenpb "github.com/mmrgreenteaa/user-management-service/internal/gen/proto/user_manegement"
 	"github.com/mmrgreenteaa/user-management-service/internal/user_management/database/mongodb"
 	"github.com/mmrgreenteaa/user-management-service/internal/user_management/handlers"
+
 	"google.golang.org/grpc"
 )
 
 func NewGRPCServer() (*grpc.Server, net.Listener) {
-
-	lis, err := net.Listen("tcp", "127.0.0.1:63480")
+	uconf, err := config.GetUsrMnger()
+	if err != nil {
+		log.Fatal(err)
+	}
+	
+	lis, err := net.Listen("tcp", uconf.Ip)
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 	}
-	db := mongodb.Сonnect()
+
+	db := mongodb.Сonnect(&uconf.DB)
 	UserMngServ := handlers.NewUserManagementServer(db)
 
 	grpcServer := grpc.NewServer()
-	usermenpb.RegisterUserManegementServer(grpcServer, UserMngServ)
+	usermenpb.RegisterUserManagementServer(grpcServer, UserMngServ)
 	return grpcServer, lis
 }
 

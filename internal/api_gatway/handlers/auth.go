@@ -1,9 +1,10 @@
 package handlers
 
 import (
-	"context"
+	"log"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -31,14 +32,19 @@ func (apgt *ApiGatway) LogIn(c *gin.Context) {
 		return
 	}
 
+	if useReq.Login == "" || useReq.Pass == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "incorrect data"})
+		return
+	}
 	req := authpb.UserInfoRequest{
 		Login:     useReq.Login,
 		Password:  useReq.Pass,
 		UserAgent: c.Request.UserAgent(),
 		Ip:        c.ClientIP(),
 	}
-	res, err := apgt.AuthServis.Login(c.Request.Context(), &req)
-	apgt.logger.Debug("login attempt", slog.String("login", req.Login))
+	ctx := metadata.NewOutgoingContext(c.Request.Context(), nil)
+	res, err := apgt.AuthServis.Login(ctx, &req)
+	apgt.logger.Info("login attempt", slog.String("login", req.Login))
 	if err != nil {
 		st, ok := status.FromError(err)
 		if !ok {
@@ -66,7 +72,7 @@ func (apgt *ApiGatway) LogIn(c *gin.Context) {
 			})
 			return
 		case codes.Unavailable:
-			c.JSON(http.StatusInternalServerError, gin.H{
+			c.JSON(http.StatusGatewayTimeout, gin.H{
 				"error": "the service is temporarily unavailable:",
 			})
 			return
@@ -94,10 +100,12 @@ func (apgt ApiGatway) AuthMiddleware() gin.HandlerFunc {
 			})
 			return
 		}
+		tokenStr := strings.TrimPrefix(token, "Bearer ")
 		req := authpb.AccessRequest{
-			Token: token,
+			Token: tokenStr,
 		}
-		res, err := apgt.AuthServis.VerifyAccess(context.Background(), &req)
+		ctx := metadata.NewOutgoingContext(c.Request.Context(), nil)
+		res, err := apgt.AuthServis.VerifyAccess(ctx, &req)
 		if err != nil {
 			st, ok := status.FromError(err)
 			if !ok {
@@ -127,7 +135,9 @@ func (apgt ApiGatway) AuthMiddleware() gin.HandlerFunc {
 				return
 			}
 		}
+		log.Println(res.UserId)
 		c.Set("user_id", res.UserId)
+		c.Next()
 
 	}
 }
@@ -197,16 +207,25 @@ func (apgt *ApiGatway) RefreshToken(c *gin.Context) {
 	}
 	c.Header("Authorization", res.AccessToken)
 	c.SetCookie("refresh_token", res.RefreshToken,
-		int(refreshTokenMaxAge), // maxAge: 2 дня (в секундах)
-		cookiePath,              // путь
-		"localhost",             // домен (или "")
-		false,                   // Secure — только по HTTPS
-		false,                   // HttpOnly — для защиты от XSS
+		int(refreshTokenMaxAge), 
+		cookiePath,              
+		"localhost",             
+		false,                 
+		false,                   
 	)
 
 }
 
 func (apgt *ApiGatway) LogOut(c *gin.Context) {
+
+	access := c.GetHeader("Authorization")
+	if access == "" {
+		apgt.logger.Warn("access token not found")
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "authorization token is required",
+		})
+		return
+	}
 
 	ref, err := c.Cookie("refresh_token")
 	if err != nil {
@@ -223,14 +242,13 @@ func (apgt *ApiGatway) LogOut(c *gin.Context) {
 		})
 		return
 	}
-	deleteCookieHandler(c)
 
 	req := authpb.LogoutRequest{
 		RefreshToken: ref,
 		UserAgent:    c.Request.UserAgent(),
 		Ip:           c.ClientIP(),
 	}
-	ctx := metadata.AppendToOutgoingContext(c.Request.Context())
+	ctx := metadata.AppendToOutgoingContext(c.Request.Context(), "Authorization", access)
 	_, err = apgt.AuthServis.Logout(ctx, &req)
 	if err != nil {
 		st, ok := status.FromError(err)
@@ -264,17 +282,18 @@ func (apgt *ApiGatway) LogOut(c *gin.Context) {
 			})
 			return
 		}
-	}
 
+	}
+	deleteCookieHandler(c)
 }
 
 func deleteCookieHandler(c *gin.Context) {
 	c.SetCookie("refresh_token", "refresh_token",
-		-1,          // maxAge: 2 дня (в секундах)
-		cookiePath,  // путь
-		"localhost", // домен (или "")
-		false,       // Secure — только по HTTPS
-		false,       // HttpOnly — для защиты от XSS
+		-1,          
+		cookiePath,  
+		"localhost", 
+		false,      
+		false,       
 	)
 
 }

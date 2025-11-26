@@ -7,17 +7,37 @@ import (
 )
 
 func TestConnct(t *testing.T) {
-	Сonnect()
+	cfg := DbConfig{
+		Host:       "localhost",
+		Port:       "5432",
+		User:       "postgres",
+		Pass:       "QWERTY",
+		Name:       "auth_service",
+		SearchPath: "tokens_info",
+	}
+
+	Сonnect(&cfg)
 }
 
 func TestAddRefresh(t *testing.T) {
-	db := Сonnect()
+
+	cfg := DbConfig{
+		Host:       "localhost",
+		Port:       "5432",
+		User:       "postgres",
+		Pass:       "QWERTY",
+		Name:       "auth_service",
+		SearchPath: "tokens_info",
+	}
+
+	db := Сonnect(&cfg)
 
 	var tests = []struct {
 		name  string
 		input struct {
 			Token     string
 			UserAgent string
+			UserId    string
 			Ip        string
 		}
 	}{
@@ -26,8 +46,10 @@ func TestAddRefresh(t *testing.T) {
 			input: struct {
 				Token     string
 				UserAgent string
+				UserId    string
 				Ip        string
 			}{
+				"Test",
 				"Test",
 				"Test",
 				"Test",
@@ -38,7 +60,7 @@ func TestAddRefresh(t *testing.T) {
 	for _, test := range tests {
 
 		t.Run(test.name, func(t *testing.T) {
-			err := db.AddRefresh(test.input.Token, test.input.UserAgent, test.input.Ip)
+			err := db.AddRefresh(test.input.Token, test.input.UserId, test.input.UserAgent, test.input.Ip)
 			assert.NoError(t, err)
 
 		})
@@ -47,12 +69,21 @@ func TestAddRefresh(t *testing.T) {
 }
 
 func TestRefershTokenValid(t *testing.T) {
-	db := Сonnect()
+	cfg := DbConfig{
+		Host:       "localhost",
+		Port:       "5432",
+		User:       "postgres",
+		Pass:       "QWERTY",
+		Name:       "auth_service",
+		SearchPath: "tokens_info",
+	}
 
+	db := Сonnect(&cfg)
 	type input struct {
 		refresh   string
 		ip        string
 		userAgent string
+		UserID    string
 	}
 
 	var tests = []struct {
@@ -66,6 +97,7 @@ func TestRefershTokenValid(t *testing.T) {
 				refresh:   " Test",
 				ip:        "Test",
 				userAgent: "Test",
+				UserID:    "Test",
 			},
 			err: nil,
 		},
@@ -74,15 +106,12 @@ func TestRefershTokenValid(t *testing.T) {
 	for _, test := range tests {
 
 		t.Run(test.name, func(t *testing.T) {
-			_, err := db.RefershTokenValid(test.input.refresh, test.input.userAgent, test.input.ip)
+			_, err := db.RefershTokenValid(test.input.refresh, test.input.userAgent, test.input.ip, test.input.UserID)
 			if test.err != nil {
-				// Ожидаем ошибку
 				if assert.Error(t, err) {
-					// Проверяем, что полученная ошибка соответствует ожидаемой
 					assert.ErrorIs(t, err, test.err)
 				}
 			} else {
-				// Ошибок не ожидаем
 				assert.NoError(t, err)
 			}
 		})
@@ -91,7 +120,16 @@ func TestRefershTokenValid(t *testing.T) {
 }
 
 func TestEditRefresh(t *testing.T) {
-	db := Сonnect()
+	cfg := DbConfig{
+		Host:       "localhost",
+		Port:       "5432",
+		User:       "postgres",
+		Pass:       "QWERTY",
+		Name:       "auth_service",
+		SearchPath: "tokens_info",
+	}
+
+	db := Сonnect(&cfg)
 
 	type input struct {
 		oldRef string

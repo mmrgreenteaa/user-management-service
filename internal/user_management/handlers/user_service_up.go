@@ -13,6 +13,11 @@ type UserManagementServer struct {
 	pb.UserManagementServer
 	logger *slog.Logger
 }
+type UserMengConfig struct {
+	Ip   string           `mapstructure:"listen_addr"`
+	DB   mongodb.DbConfig `mapstructure:"mongodb"`
+
+}
 
 func NewUserManagementServer(db *mongodb.DB) *UserManagementServer {
 

@@ -55,7 +55,7 @@ func (db *DB) AddUser(login string, pass string) error {
 	err := collection.FindOne(ctx, filter).Decode(&user)
 	if err != nil {
 		if err != mongo.ErrNoDocuments {
-			return fmt.Errorf("fail getting a user - %w", err)
+			return fmt.Errorf("failed add a user duplication of data - %w", err)
 		}
 	}
 	_, err = collection.InsertOne(ctx, user)
@@ -67,7 +67,11 @@ func (db *DB) AddUser(login string, pass string) error {
 }
 
 func (db *DB) DeleteUser(userId string) error {
-	filter := bson.D{{Key: "user_id", Value: userId}}
+	objID, err := primitive.ObjectIDFromHex(userId)
+	if err != nil {
+		return fmt.Errorf("failed edit login %w", err)
+	}
+	filter := bson.D{{Key: "_id", Value: objID}}
 	ctx := context.Background()
 	const docName = "test"
 	collection := db.Database(usersdb).Collection(docName)
@@ -86,7 +90,12 @@ func (db *DB) EditLogin(userId string, newLogin string) error {
 	const docName = "test"
 	collection := db.Database(usersdb).Collection(docName)
 
-	filter := bson.M{"user_id": userId}
+	objID, err := primitive.ObjectIDFromHex(userId)
+	if err != nil {
+		return fmt.Errorf("failed edit login %w", err)
+	}
+
+	filter := bson.M{"_id": objID}
 	update := bson.M{
 		"$set": bson.M{
 			"login": newLogin,

@@ -1,0 +1,23 @@
+FROM golang:1.24.0-alpine AS builder
+
+WORKDIR /app
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+RUN CGO_ENABLED=0 GOOS=linux go build -o /user_manager ./cmd/user_manager/main
+
+
+FROM scratch
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+
+COPY --from=builder /app/config/config.yaml /config/config.yaml
+
+COPY --from=builder /user_manager /user_manager
+
+EXPOSE 62380
+
+# Run
+CMD ["/user_manager"]

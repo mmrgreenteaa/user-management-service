@@ -30,6 +30,11 @@ const loginT = "test"
 const passT = "test"
 
 func setSetupServer() *testSetup {
+
+	cfg := mongodb.DbConfig{
+		Ip: "localhost:27017",
+	}
+
 	lis, err := net.Listen("tcp", ":0")
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
@@ -37,7 +42,7 @@ func setSetupServer() *testSetup {
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	s := &UserManagementServer{
-		Db:     mongodb.Сonnect(),
+		Db:     mongodb.Сonnect(&cfg),
 		logger: logger,
 	}
 

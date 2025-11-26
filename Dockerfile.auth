@@ -1,0 +1,21 @@
+FROM golang:1.24.0-alpine AS builder
+
+WORKDIR /app
+
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -o /auth_service ./cmd/auth_service/main
+
+
+FROM scratch
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+
+COPY --from=builder /app/config/config.yaml /config/config.yaml
+
+COPY --from=builder /auth_service /auth_service
+
+EXPOSE 62580
+
+# Run
+CMD ["/auth_service"]

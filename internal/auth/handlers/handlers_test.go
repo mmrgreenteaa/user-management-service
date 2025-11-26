@@ -8,10 +8,10 @@ import (
 	"os"
 	"testing"
 
-	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/auth"
 	"github.com/mmrgreenteaa/user-management-service/internal/auth/datebase/postgresql"
 	genAuth "github.com/mmrgreenteaa/user-management-service/internal/gen/proto/auth"
 	userManegementpb "github.com/mmrgreenteaa/user-management-service/internal/gen/proto/user_manegement"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
@@ -23,6 +23,15 @@ import (
 )
 
 const userId = "430"
+
+var dbcfg = postgresql.DbConfig{
+	Host:       "localhost",
+	Port:       "5432",
+	User:       "postgres",
+	Pass:       "QWERTY",
+	Name:       "auth_service",
+	SearchPath: "tokens_info",
+}
 
 type fakeClinetServ struct {
 }
@@ -66,7 +75,7 @@ func setupTestServer() *testSetup {
 	fakeClient := &fakeClinetServ{}
 
 	s := &AuthServer{
-		Db:         *postgresql.Сonnect(),
+		Db:         *postgresql.Сonnect(&dbcfg),
 		UserClinet: fakeClient,
 		logger:     slog.New(slog.NewTextHandler(os.Stdout, nil)),
 	}
@@ -80,26 +89,6 @@ func setupTestServer() *testSetup {
 		lis:      lis,
 		service:  s,
 	}
-}
-
-func setupTestServerMiddleWare() (*grpc.Server, net.Listener) {
-
-	lis, err := net.Listen("tcp", ":0")
-	if err != nil {
-		log.Fatalf("Failed to listen: %v", err)
-	}
-	fakeClient := &fakeClinetServ{}
-	s := &AuthServer{
-		Db:         *postgresql.Сonnect(),
-		UserClinet: fakeClient,
-		logger:     slog.New(slog.NewTextHandler(os.Stdout, nil)),
-	}
-
-	grpcServer := grpc.NewServer(grpc.UnaryInterceptor(grpc_auth.UnaryServerInterceptor(s.CheckJWT)))
-	genAuth.RegisterAuthServer(grpcServer, s)
-
-	go grpcServer.Serve(lis)
-	return grpcServer, lis
 }
 
 func TestRefresh(t *testing.T) {
@@ -161,7 +150,7 @@ func TestRefresh(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 
-			ctx := context.WithValue(context.Background(), userIdJwt, userId)
+			ctx := context.WithValue(context.Background(), UserIdJwt, userId)
 			md := metadata.Pairs("authorization", test.accsess)
 			newctx := metadata.NewOutgoingContext(ctx, md)
 
@@ -202,9 +191,9 @@ func TestLogOut(t *testing.T) {
 
 	clinet := genAuth.NewAuthClient(conn)
 	require.NoError(t, err)
-	tokens, err := CreateRefreshAcsessToken(userId)
+	tokens, err := setup.service.CreateRefreshAcsessToken(userId)
 	require.NoError(t, err)
-	failTokens, err := CreateRefreshAcsessToken("3434")
+	failTokens, err := setup.service.CreateRefreshAcsessToken("3434")
 	require.NoError(t, err)
 
 	tests := []struct {

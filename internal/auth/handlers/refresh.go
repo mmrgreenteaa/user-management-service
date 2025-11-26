@@ -14,7 +14,7 @@ import (
 
 func (s *AuthServer) RefreshToken(ctx context.Context, refresh *auth.RefreshRequest) (*auth.SignInUserResponse, error) {
 
-	userId, ok := ctx.Value(UserIdJwt).(string)
+	userId, ok := ctx.Value("user_id").(string)
 	if !ok {
 		s.logger.Error("userid was not found in the context")
 		return nil, status.Error(codes.Internal, "failed provided user id")
@@ -39,7 +39,7 @@ func (s *AuthServer) RefreshToken(ctx context.Context, refresh *auth.RefreshRequ
 		return nil, status.Error(codes.Internal, "failed refresh token valid")
 	}
 
-	tokens, err := CreateRefreshAcsessToken(userId)
+	tokens, err := s.CreateRefreshAcsessToken(userId)
 	if err != nil {
 		s.logger.Error("failed create tokens", slog.String("Error", err.Error()))
 		return nil, status.Error(codes.Internal, "failed create tokens")

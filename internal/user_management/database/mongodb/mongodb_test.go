@@ -9,13 +9,18 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+var cfg = DbConfig{
+	Ip: "localhost:27017",
+}
+
 func TestConnct(t *testing.T) {
-	Сonnect()
+
+	Сonnect(&cfg)
 }
 
 func TestGetUser(t *testing.T) {
 
-	db := Сonnect()
+	db := Сonnect(&cfg)
 
 	var tests = []struct {
 		name  string
@@ -73,7 +78,7 @@ func TestGetUser(t *testing.T) {
 }
 
 func TestAddUser(t *testing.T) {
-	db := Сonnect()
+	db := Сonnect(&cfg)
 	type testInput struct {
 		login string
 		pass  string
@@ -104,9 +109,9 @@ func TestAddUser(t *testing.T) {
 }
 
 func TestEdit(t *testing.T) {
-	db := Сonnect()
+	db := Сonnect(&cfg)
 	type testInput struct {
-		oldLogin string
+		userId   string
 		newLogin string
 	}
 	tests := []struct {
@@ -116,12 +121,12 @@ func TestEdit(t *testing.T) {
 	}{
 		{
 			name:  "ok",
-			input: testInput{oldLogin: "vadim", newLogin: "vadomtest1"},
+			input: testInput{userId: "68fa605e2d818431a853b33d", newLogin: "vadomtest1"},
 			err:   nil,
 		},
 		{
 			name:  "old login not found",
-			input: testInput{oldLogin: "Testss", newLogin: "vadomtest2"},
+			input: testInput{userId: "Testss", newLogin: "vadomtest2"},
 			err:   fmt.Errorf("fail: Document not found"),
 		},
 	}
@@ -129,7 +134,7 @@ func TestEdit(t *testing.T) {
 	for _, test := range tests {
 
 		t.Run(test.name, func(t *testing.T) {
-			err := db.EditLogin(test.input.oldLogin, test.input.newLogin)
+			err := db.EditLogin(test.input.userId, test.input.newLogin)
 			if test.err != nil {
 				if assert.Error(t, err) {
 					if err.Error() == test.err.Error() {
@@ -146,7 +151,7 @@ func TestEdit(t *testing.T) {
 }
 
 func TestDeleteUser(t *testing.T) {
-	db := Сonnect()
+	db := Сonnect(&cfg)
 
 	tests := []struct {
 		name  string

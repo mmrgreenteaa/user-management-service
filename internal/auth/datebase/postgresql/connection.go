@@ -1,6 +1,7 @@
 package postgresql
 
 import (
+	"fmt"
 	"log"
 	"log/slog"
 	"os"
@@ -14,12 +15,22 @@ type DB struct {
 	logger slog.Logger
 }
 
-func Сonnect() *DB {
+type DbConfig struct {
+	Host       string `mapstructure:"host"`
+	User       string `mapstructure:"user"`
+	Pass       string `mapstructure:"password"`
+	Name       string `mapstructure:"name"`
+	Port       string `mapstructure:"port"`
+	SearchPath string `mapstructure:"searchPath"`
+}
 
-	dsn := "host=localhost user=postgres password=QWERTY dbname=auth_service port=5432 search_path= tokens_info"
+func Сonnect(confg *DbConfig) *DB {
+	
+	dsn := "host=%s user=%s password=%s dbname=%s port=%s search_path= %s"
+ dsn = 	fmt.Sprintf(dsn, confg.Host, confg.User, confg.Pass, confg.Name, confg.Port, confg.SearchPath)
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		log.Panic("error connect")
+		log.Panic("error connect to posgresql")
 	}
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	return &DB{db, *logger}

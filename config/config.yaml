@@ -1,0 +1,21 @@
+api_gateway:       
+  listen_addr: :62480 
+services_endpoints:
+  auth: auth:62580
+  user_manager: user_manager:62380
+auth:
+  listen_addr: :62580
+  secretkey: 1232
+  posgresql: 
+    host: posgredb
+    port: 5432
+    user: postgres
+    password: QWERTY
+    name: auth_service
+    searchPath: tokens_info
+manager:
+  listen_addr: :62380
+  mongodb:
+    ip:  mongo:27017
+    user: admin
+    password: secret

@@ -15,6 +15,7 @@ func M1224CreateRerefreshTokens() *gormigrate.Migration {
 		Token     string `gorm:"unique;not null"`
 		UserAgent string
 		Ip        string
+		UserID    string
 		CreatedAt time.Time
 		ExpiresAt time.Time
 	}
@@ -22,6 +23,8 @@ func M1224CreateRerefreshTokens() *gormigrate.Migration {
 	return &gormigrate.Migration{
 		ID: "2025159140000",
 		Migrate: func(tx *gorm.DB) error {
+
+		
 			err := tx.AutoMigrate(RefreshToken{})
 			if err != nil {
 				return fmt.Errorf("magrate error %w", err)

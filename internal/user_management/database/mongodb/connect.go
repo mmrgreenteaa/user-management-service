@@ -2,6 +2,7 @@ package mongodb
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"go.mongodb.org/mongo-driver/mongo"
@@ -12,9 +13,15 @@ type DB struct {
 	*mongo.Client
 }
 
-func Сonnect() *DB {
+type DbConfig struct {
+	Ip   string `mapstructure:"ip"`
+	Pass string
+}
+
+func Сonnect(confg *DbConfig) *DB {
 	ctx := context.TODO()
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
+	conn := fmt.Sprintf("mongodb://%s", confg.Ip)
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(conn))
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 
 	"github.com/mmrgreenteaa/user-management-service/internal/auth/datebase/postgresql"
@@ -14,15 +15,24 @@ import (
 )
 
 // Здесь middleware нужен
-func (s *AuthServer) LogOut(ctx context.Context, req *auth.RefreshRequest) (*emptypb.Empty, error) {
+func (s *AuthServer) Logout(ctx context.Context, req *auth.LogoutRequest) (*emptypb.Empty, error) {
 
-	
-	userId, ok := ctx.Value(UserIdJwt).(string)
-	if !ok {
+	userIdVal := ctx.Value("user_id")
+	if userIdVal == nil {
 		s.logger.Error("userid was not found in the context")
-		return nil, status.Error(codes.Internal, "failed provided user id")
+		return nil, status.Error(codes.Unauthenticated, "user authentication required")
 	}
 
+	userId, ok := userIdVal.(string)
+	if !ok {
+		s.logger.Error("userid has invalid type in context", "type", fmt.Sprintf("%T", userIdVal))
+		return nil, status.Error(codes.Internal, "invalid user id format")
+	}
+
+	if userId == "" {
+		s.logger.Error("userid is empty")
+		return nil, status.Error(codes.Unauthenticated, "user authentication required")
+	}
 	idRefresh, err := s.Db.RefershTokenValid(req.RefreshToken, req.UserAgent, req.Ip, userId)
 	if err != nil {
 

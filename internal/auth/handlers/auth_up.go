@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"log"
+	"fmt"
 	"log/slog"
 	"os"
 
@@ -17,15 +17,21 @@ type AuthServer struct {
 	Db         postgresql.DB
 	UserClinet user_manegement.UserManagementClient
 	logger     *slog.Logger
+	cfg        *AuthConfig
 }
 
-var secretKey = "12333"
+type AuthConfig struct {
+	Ip         string              `mapstructure:"listen_addr"`
+	UserMengIp string              `mapstructure:"user_menedgerIp"`
+	DbConfig   postgresql.DbConfig `mapstructure:"posgresql"`
+	SecretKey  string
+}
 
-func NewAuthServer(db *postgresql.DB) *AuthServer {
-
-	conn, err := grpc.NewClient("127.0.0.1:634840", grpc.WithTransportCredentials(insecure.NewCredentials()))
+func NewAuthServer(db *postgresql.DB, confg *AuthConfig) (*AuthServer, error) {
+	//127.0.0.1:62380
+	conn, err := grpc.NewClient(confg.UserMengIp, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		log.Fatal("fail to connct ")
+		return nil, fmt.Errorf("falied connect to user menedger - %w", err)
 	}
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
@@ -33,5 +39,6 @@ func NewAuthServer(db *postgresql.DB) *AuthServer {
 		Db:         *db,
 		UserClinet: user_manegement.NewUserManagementClient(conn),
 		logger:     logger,
-	}
+		cfg:        confg,
+	}, nil
 }

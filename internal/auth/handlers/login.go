@@ -25,14 +25,14 @@ func (s *AuthServer) Login(ctx context.Context, req *auth.UserInfoRequest) (*aut
 	if err != nil {
 		st, ok := status.FromError(err)
 		if !ok {
-			s.logger.Error("unknow status VerifyCredentials func service user menagement")
+			s.logger.Error("unknow status VerifyCredentials func service user menagement ", slog.String("Error", err.Error()))
 			return nil, status.Errorf(codes.Unknown, "user manegement service failed:%v", st.Message())
 		}
 		s.logger.Error("verifyCredentials fail ", slog.String("Error", err.Error()))
 		return nil, status.Errorf(st.Code(), "verify credentials failed: %v", st.Message())
 	}
 
-	tokens, err := CreateRefreshAcsessToken(res.UserId)
+	tokens, err := s.CreateRefreshAcsessToken(res.UserId)
 	if err != nil {
 		s.logger.Error("fail create tokens", slog.String("Error", err.Error()))
 		return nil, status.Errorf(codes.Internal, "faid create tokens - %v", err.Error())

@@ -1,0 +1,42 @@
+services:
+  auth:
+    build:
+      context: .
+      dockerfile: Dockerfile.auth
+    ports:
+    - "62580:62580"
+    depends_on:
+    - posgredb
+    environment:
+    -  AUTH_SECRET_KEY=23123
+    - AUTH_PASSWORD_DB=QWERTY
+
+  user_manager: 
+     build:
+      context: .
+      dockerfile: Dockerfile.user-manager
+     ports:
+      - "62380:62380" 
+     environment:
+      - "USER_MANADGER_PASS_DB"
+  
+  api_gateway:
+    build:
+        context: .
+        dockerfile: Dockerfile.api-gateway
+    ports:
+      - "8080:8080"
+  posgredb:
+    image: postgres:13-alpine
+    environment:
+       POSTGRES_USER:  postgres
+       POSTGRES_PASSWORD: QWERTY
+       POSTGRES_DB: auth_service 
+    ports:
+      - "5432:5432"
+  mongo:
+    image: mongo:latest
+    container_name: my_mongo
+    ports:
+      - "27017:27017"
+

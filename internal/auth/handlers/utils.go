@@ -16,7 +16,7 @@ type tokens struct {
 	refresh string
 }
 
-func CreateRefreshAcsessToken(userid string) (*tokens, error) {
+func (s *AuthServer) CreateRefreshAcsessToken(userid string) (*tokens, error) {
 	refresh, err := GenerateRefreshToken()
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to sign access token")
@@ -26,7 +26,7 @@ func CreateRefreshAcsessToken(userid string) (*tokens, error) {
 		"exp":     time.Now().Add(15 * time.Minute).Unix(),
 	})
 
-	jwtAccess, err := access.SignedString([]byte(secretKey))
+	jwtAccess, err := access.SignedString([]byte(s.cfg.SecretKey))
 	if err != nil {
 		return nil, status.Error(codes.Internal, "gerete acess tocken")
 	}

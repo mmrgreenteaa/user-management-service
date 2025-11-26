@@ -11,7 +11,15 @@ import (
 
 func TestM1224_create_rerefresh_tokens(t *testing.T) {
 
-	db := postgresql.Сonnect()
+	cfg := postgresql.DbConfig{
+		Host:       "localhost",
+		Port:       "5432",
+		User:       "postgres",
+		Pass:       "QWERTY",
+		Name:       "auth_service",
+		SearchPath: "tokens_info",
+	}
+	db := postgresql.Сonnect(&cfg)
 
 	m := gormigrate.New(db.DB, gormigrate.DefaultOptions, []*gormigrate.Migration{M1224CreateRerefreshTokens()})
 

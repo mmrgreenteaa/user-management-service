@@ -3,5 +3,27 @@
     // Наведите указатель мыши, чтобы просмотреть описания существующих атрибутов.
     // Для получения дополнительной информации посетите: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
-    "configurations": []
+    "configurations": [
+      {
+      "name": "Launch auth_service",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/cmd/auth_service/main"
+    },
+    {
+      "name": "Launch user_manadger",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+    "program": "${workspaceFolder}/cmd/user_manager/main"
+    },
+    {
+      "name": "Launch api_gatway",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/cmd/api_gateway/main"
+    }
+    ]
 }

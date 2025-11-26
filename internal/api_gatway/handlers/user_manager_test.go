@@ -85,6 +85,7 @@ func TestRegistrate(t *testing.T) {
 
 func TestLoginEdit(t *testing.T) {
 
+	gin.SetMode(gin.TestMode)
 	umm := mocks.UserManagementClientMock{
 		EditLoginFunc: func(ctx context.Context, in *user_manegement.UserLoginEditReq, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 			return nil, nil
@@ -136,11 +137,13 @@ func TestLoginEdit(t *testing.T) {
 			assert.NoError(t, err)
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest("POST", "/ping", bytes.NewBuffer(reqBody))
-			ap.userid = tt.input.UserId
+			ctx := gin.CreateTestContextOnly(w, router)
+
+			ctx.Request = req
+			ctx.Set("user_id", "400")
 			req.Header.Set("Content-Type", "application/json")
-			ctx := context.WithValue(context.Background(), "user_id", tt.input.UserId)
-			req.WithContext(ctx)
-			router.ServeHTTP(w, req)
+			log.Println(ctx)
+			ap.EditUserLogin(ctx)
 			log.Println(w.Header())
 			log.Println(w.Body)
 			assert.Equal(t, tt.statusEx, w.Code)
@@ -150,7 +153,7 @@ func TestLoginEdit(t *testing.T) {
 }
 
 func TestUserDelete(t *testing.T) {
-
+	gin.SetMode(gin.TestMode)
 	umm := mocks.UserManagementClientMock{
 		DeleteUserFunc: func(ctx context.Context, in *user_manegement.DeleteReq, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 			return nil, nil
@@ -163,51 +166,45 @@ func TestUserDelete(t *testing.T) {
 	}
 
 	router := gin.Default()
-	router.POST("/ping", ap.DeleteAccount)
+	router.GET("/ping", ap.DeleteAccount)
 	type LoginRequest struct {
 		Login string `json:"login"`
 	}
 
 	tests := []struct {
 		name     string
-		input    LoginRequest
+		userId   string
 		statusEx int
 	}{
 		{
 
-			name: "success",
-			input: LoginRequest{
-				UserId: "400",
-				Login:  "hero2",
-			},
+			name:     "success",
+			userId:   "400",
 			statusEx: http.StatusOK,
 		},
 
 		{
-			name: "login not corrected",
-			input: LoginRequest{
-				UserId: "300",
-				Login:  "",
-			},
+			name:     "user_id not corrected",
+			userId:   "",
 			statusEx: http.StatusBadRequest,
 		},
 	}
 
-	data := LoginRequest{
-		Login: "Test",
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
 
-	reqBody, err := json.Marshal(data)
-	if err != nil {
-		panic(err)
-	}
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest(http.MethodGet, "/ping", nil)
+			ctx := gin.CreateTestContextOnly(w, router)
 
-	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("POST", "/ping", bytes.NewBuffer(reqBody))
-	req.Header.Set("Content-Type", "application/json")
-	router.ServeHTTP(w, req)
-	log.Println(w.Header())
-	log.Println(w.Body)
-	assert.Equal(t, 200, w.Code)
+			ctx.Request = req
+			ctx.Set("user_id", tt.userId)
+			req.Header.Set("Content-Type", "application/json")
+			ap.DeleteAccount(ctx)
+			log.Println(w.Header())
+			log.Println(w.Body)
+			assert.Equal(t, tt.statusEx, w.Code)
+		})
+	}
 
 }
