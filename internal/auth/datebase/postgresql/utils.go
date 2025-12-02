@@ -5,6 +5,7 @@ import (
 	"fmt"
 )
 
+// GenHash generate hash return hash string 
 func GenHash(refresh string) string {
 
 	data := []byte(refresh)

@@ -7,16 +7,24 @@ option go_package = "github.com/mmrgreenteaa/user-management-service/interal/gen
 import "google/protobuf/empty.proto";
 
 
-service TestService {
-  rpc EmptyCall (google.protobuf.Empty) returns (google.protobuf.Empty);
-}
-
+// Service responsible for user authentication and token management.
 service Auth{ 
+    // Authenticates a user using login and password.
+    // Returns a pair of tokens (Access & Refresh) if credentials are valid.
     rpc Login(UserInfoRequest) returns (SignInUserResponse){}
+
+    // Validates the provided Access Token.
+    // Used by other microservices to check user authorization.
     rpc VerifyAccess(AccessRequest) returns(VerifyAccessResponse){}
+    
+    // Issues a new pair of tokens using a valid Refresh Token.
+    // Should be called when Access Token expires.
     rpc RefreshToken(RefreshRequest) returns (SignInUserResponse){}
+   
+    // Revokes the user session associated with the provided Refresh Token.
     rpc Logout(LogoutRequest) returns (google.protobuf.Empty){}
 }
+
 
 message RefreshRequest{ 
   string refresh_token = 1; 
@@ -25,6 +33,7 @@ message RefreshRequest{
 }
 
 message AccessRequest{
+  // access token
     string token = 1; 
 }
 

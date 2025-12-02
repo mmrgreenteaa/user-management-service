@@ -1,3 +1,4 @@
+// Package postgresql provides tools for managing PostgreSQL database operations.
 package postgresql
 
 import (
@@ -10,11 +11,13 @@ import (
 	"gorm.io/gorm"
 )
 
+// DB represents a database handle containing the connection pool and a logger.
 type DB struct {
 	*gorm.DB
 	logger slog.Logger
 }
 
+// DbConfig holds the configuration settings for the PostgreSQL connection.
 type DbConfig struct {
 	Host       string `mapstructure:"host"`
 	User       string `mapstructure:"user"`
@@ -24,10 +27,12 @@ type DbConfig struct {
 	SearchPath string `mapstructure:"searchPath"`
 }
 
-func Сonnect(confg *DbConfig) *DB {
-	
+// Connect establishes a connection to the PostgreSQL database using the provided configuration.
+// It returns an initialized DB instance.
+func Connect(confg *DbConfig) *DB {
+
 	dsn := "host=%s user=%s password=%s dbname=%s port=%s search_path= %s"
- dsn = 	fmt.Sprintf(dsn, confg.Host, confg.User, confg.Pass, confg.Name, confg.Port, confg.SearchPath)
+	dsn = fmt.Sprintf(dsn, confg.Host, confg.User, confg.Pass, confg.Name, confg.Port, confg.SearchPath)
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Panic("error connect to posgresql")

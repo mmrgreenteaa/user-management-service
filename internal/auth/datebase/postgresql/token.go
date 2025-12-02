@@ -13,9 +13,12 @@ import (
 	"gorm.io/gorm"
 )
 
+// ErrUserAgentMismatch indicates  that the user agent in the database does not match the current request.
 var ErrUserAgentMismatch = errors.New("the user agent does not match")
+// NoRecord indicates  about missing records
 var NoRecord = errors.New("no record found")
 
+// AddRefresh adds a new refresh token to the database.
 func (db *DB) AddRefresh(refresh string, userId string, userAgent string, ip string) error {
 
 	token := models.RefreshToken{
@@ -33,6 +36,8 @@ func (db *DB) AddRefresh(refresh string, userId string, userAgent string, ip str
 	return nil
 }
 
+// RefreshTokenValid verifies the token for compliance.
+// It returns ErrUserAgentMismatch if the user agent does not match.
 func (db *DB) RefershTokenValid(refresh string, userAgent string, Ip string, userId string) (string, error) {
 	token := models.RefreshToken{}
 	genrefresh := GenHash(refresh)
@@ -58,8 +63,8 @@ func (db *DB) RefershTokenValid(refresh string, userAgent string, Ip string, use
 
 		fileHandler := slog.NewJSONHandler(file, nil)
 		fLogger := slog.New(fileHandler)
-		db.logger.Warn("unknown ip adress", "user_id", userId, "refresh token", genrefresh)
-		fLogger.Warn("unknown ip adress", "user_id", userId, "refresh token", genrefresh)
+		db.logger.Warn("unknown ip address", "user_id", userId, "refresh token", genrefresh)
+		fLogger.Warn("unknown ip address", "user_id", userId, "refresh token", genrefresh)
 	}
 
 	if token.UserAgent != userAgent {
@@ -69,7 +74,7 @@ func (db *DB) RefershTokenValid(refresh string, userAgent string, Ip string, use
 	return strconv.FormatUint(uint64(token.ID), 10), nil
 
 }
-
+// EditRefreshToken replaces the old refresh token with a new one.
 func (db *DB) EditRefreshToken(tokenId string, newRefresh string) error {
 
 	token := models.RefreshToken{}
@@ -87,12 +92,13 @@ func (db *DB) EditRefreshToken(tokenId string, newRefresh string) error {
 	return nil
 }
 
+// DeleteToken delete refresh token 
 func (db *DB) DeleteToken(id string) error {
 
 	res := db.Where("id = ?", id).Delete(&models.RefreshToken{})
 	if res.Error != nil {
 
-		return fmt.Errorf("fail refresh token delete: %w", res.Error)
+		return fmt.Errorf(" failed to delete refresh token: %w", res.Error)
 	}
 	if res.RowsAffected == 0 {
 

@@ -13,13 +13,14 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// VerifyCredentials checks the user's login and password
 func (s *UserManagementServer) VerifyCredentials(ctx context.Context, req *pb.UserValidRequest) (*pb.UserValidResponse, error) {
 
 	id, err := s.Db.GetUserId(req.Login, req.Password)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			s.logger.Error("verifyCredentials: get user id invalid login or valid", slog.String("Login", req.Login))
-			return nil, status.Error(codes.Unauthenticated, "invalid login or password")
+			return nil, status.Error(codes.InvalidArgument, "invalid login or password")
 		}
 		s.logger.Error("failed get user", slog.String("Error", err.Error()))
 		return nil, status.Error(codes.Internal, "")
@@ -28,6 +29,7 @@ func (s *UserManagementServer) VerifyCredentials(ctx context.Context, req *pb.Us
 	return &pb.UserValidResponse{UserId: id}, nil
 }
 
+// RegistrationUser add new user in database.
 func (s *UserManagementServer) RegistrationUser(ctx context.Context, req *pb.UserRegistrationReq) (*empty.Empty, error) {
 
 	err := s.Db.AddUser(req.Login, req.Password)
@@ -38,6 +40,7 @@ func (s *UserManagementServer) RegistrationUser(ctx context.Context, req *pb.Use
 	return nil, nil
 }
 
+// EditLogin edits login user.
 func (s *UserManagementServer) EditLogin(ctx context.Context, req *pb.UserLoginEditReq) (*empty.Empty, error) {
 	err := s.Db.EditLogin(req.UserId, req.NewLogin)
 	if err != nil {
@@ -51,6 +54,7 @@ func (s *UserManagementServer) EditLogin(ctx context.Context, req *pb.UserLoginE
 	return nil, nil
 }
 
+// DeleteUser deletes user
 func (s *UserManagementServer) DeleteUser(ctx context.Context, req *pb.DeleteReq) (*empty.Empty, error) {
 
 	//Note: добавито чтобы пользователь мог удалить только свои дыннеые

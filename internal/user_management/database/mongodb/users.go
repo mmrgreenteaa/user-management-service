@@ -11,10 +11,13 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+// usersdb stores name collection in datebase mongodb
 const usersdb = "test"
 
-var NoRecord = errors.New("no record")
+//  NoRecord indicates  about missing records
+var NoRecord = errors.New("no record found")
 
+// GetUserId provided by user id user
 func (db *DB) GetUserId(login string, pass string) (string, error) {
 
 	ctx := context.Background()
@@ -39,6 +42,7 @@ func (db *DB) GetUserId(login string, pass string) (string, error) {
 	return user.ID.Hex(), nil
 }
 
+// AddUser add new user in collection.
 func (db *DB) AddUser(login string, pass string) error {
 	//NOTE: шифрование паролей
 	filter := bson.D{{Key: "login", Value: login}}
@@ -66,6 +70,7 @@ func (db *DB) AddUser(login string, pass string) error {
 	return nil
 }
 
+// DeleteUser deletes user. 
 func (db *DB) DeleteUser(userId string) error {
 	objID, err := primitive.ObjectIDFromHex(userId)
 	if err != nil {
@@ -85,6 +90,7 @@ func (db *DB) DeleteUser(userId string) error {
 	return nil
 }
 
+// EditLogin edit login user.
 func (db *DB) EditLogin(userId string, newLogin string) error {
 	ctx := context.Background()
 	const docName = "test"

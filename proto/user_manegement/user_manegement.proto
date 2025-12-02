@@ -30,9 +30,14 @@ message DeleteReq{
     string user_id = 1;  
 }
 
+// User data management service
 service UserManagement{ 
+    // Checks if the provided login and password are valid.
     rpc VerifyCredentials(UserValidRequest) returns (UserValidResponse){}
+    // Registers a new user. Returns an error if the username is exits. 
     rpc RegistrationUser(UserRegistrationReq) returns (google.protobuf.Empty){}
+    // Updates the user's login.
     rpc EditLogin(UserLoginEditReq) returns (google.protobuf.Empty){}
+    // delete user.
     rpc DeleteUser(DeleteReq) returns (google.protobuf.Empty){}
 };

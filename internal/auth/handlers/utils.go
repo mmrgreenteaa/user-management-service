@@ -11,11 +11,13 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// tokens stores access and refresh tokens 
 type tokens struct {
 	acsess  string
 	refresh string
 }
 
+// CreateRefreshAcsessToken genereates   a pair of access and refresh tokens (  
 func (s *AuthServer) CreateRefreshAcsessToken(userid string) (*tokens, error) {
 	refresh, err := GenerateRefreshToken()
 	if err != nil {
@@ -33,6 +35,7 @@ func (s *AuthServer) CreateRefreshAcsessToken(userid string) (*tokens, error) {
 	return &tokens{jwtAccess, refresh}, nil
 }
 
+// GenerateRefreshToken generates a new refresh token.
 func GenerateRefreshToken() (string, error) {
 	b := make([]byte, 32)
 	_, err := rand.Read(b)

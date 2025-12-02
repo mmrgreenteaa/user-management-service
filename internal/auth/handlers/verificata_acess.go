@@ -14,10 +14,7 @@ import (
 	"strings"
 )
 
-type userIdKeyType struct{}
-
-var UserIdJwt userIdKeyType
-
+// VerifyAccess verifies the access token.
 func (s *AuthServer) VerifyAccess(ctx context.Context, access *auth.AccessRequest) (*auth.VerifyAccessResponse, error) {
 	s.logger.Info("requst access token", slog.String("Access", access.Token))
 	token, err := jwt.Parse(access.Token, func(t *jwt.Token) (any, error) {
@@ -66,6 +63,7 @@ func (s *AuthServer) AuthFuncOverride(ctx context.Context, fullMethodName string
 	return s.ParseJWT(ctx)
 }
 
+// ParseJWT parses jwt and extracts  user_id
 func (s AuthServer) ParseJWT(ctx context.Context) (context.Context, error) {
 
 	md, ok := metadata.FromIncomingContext(ctx)
@@ -107,6 +105,5 @@ func (s AuthServer) ParseJWT(ctx context.Context) (context.Context, error) {
 	}
 
 	newCtx := context.WithValue(ctx, "user_id", requid)
-	//	newCtx := metadata.AppendToOutgoingContext(ctx, "user_id", requid)
 	return newCtx, nil
 }

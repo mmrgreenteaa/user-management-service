@@ -16,7 +16,7 @@ func TestConnct(t *testing.T) {
 		SearchPath: "tokens_info",
 	}
 
-	Сonnect(&cfg)
+	Connect(&cfg)
 }
 
 func TestAddRefresh(t *testing.T) {
@@ -30,7 +30,7 @@ func TestAddRefresh(t *testing.T) {
 		SearchPath: "tokens_info",
 	}
 
-	db := Сonnect(&cfg)
+	db := Connect(&cfg)
 
 	var tests = []struct {
 		name  string
@@ -78,7 +78,7 @@ func TestRefershTokenValid(t *testing.T) {
 		SearchPath: "tokens_info",
 	}
 
-	db := Сonnect(&cfg)
+	db := Connect(&cfg)
 	type input struct {
 		refresh   string
 		ip        string
@@ -129,7 +129,7 @@ func TestEditRefresh(t *testing.T) {
 		SearchPath: "tokens_info",
 	}
 
-	db := Сonnect(&cfg)
+	db := Connect(&cfg)
 
 	type input struct {
 		oldRef string

@@ -19,13 +19,27 @@ const (
 	cookiePath         = "/"
 )
 
+type UserParm struct {
+	Login string `json:"login" binding:"required" example:"my_user"`
+	Pass  string `json:"password" binding:"required" example:"123456"`
+}
+
+// @Summary      Authenticates the user
+// @Description  Authenticates the user and generates a new refresh token
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        input body UserParm true "User login and password"
+// @Header       200 {string} Authorization "Bearer <token>"
+// @Header       200 {string} Set-Cookie "refreshToken=token; Path=/; HttpOnly"
+// @Failure      400 {object} string "Invalid input"
+// @Failure      401 {object} string "Unauthorized"
+// @Failure      500 {object} string "Internal Server Error"
+// @Failure      504 {object} string "Service unavailable"
+// @Router       /login [post]
 func (apgt *ApiGatway) LogIn(c *gin.Context) {
 
-	type user struct {
-		Login string `json:"login"`
-		Pass  string `json:"password"`
-	}
-	var useReq user
+	var useReq UserParm
 
 	if err := c.ShouldBindJSON(&useReq); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "incorrect data"})
@@ -84,8 +98,8 @@ func (apgt *ApiGatway) LogIn(c *gin.Context) {
 		int(refreshTokenMaxAge.Seconds()),
 		cookiePath,
 		"localhost",
-		false, // Secure — только по HTTPS
-		false, // HttpOnly — для защиты от XSS
+		false,
+		false,
 	)
 	c.JSON(http.StatusOK, nil)
 }
@@ -129,7 +143,7 @@ func (apgt ApiGatway) AuthMiddleware() gin.HandlerFunc {
 				})
 				return
 			case codes.Unavailable:
-				c.JSON(http.StatusInternalServerError, gin.H{
+				c.JSON(http.StatusGatewayTimeout, gin.H{
 					"error": "the service is temporarily unavailable:",
 				})
 				return
@@ -142,6 +156,22 @@ func (apgt ApiGatway) AuthMiddleware() gin.HandlerFunc {
 	}
 }
 
+// RefreshTokens godoc
+//
+// @Summary  Validates the request and update refresh token
+// @Description  Uses refresh token from cookie to issue new tokens
+// @Tags         auth
+// @Produce      json
+// @Security     ApiKeyAuth
+// @Param accessToken header string true "jwt access token"
+// @Param refresh_token header string true "refresh token"
+// @Header 200 {string} Authorization "Bearer <token>"
+// @Header 200 {string} Set-Cookie "refreshToken=value2; Path=/api; HttpOnly"
+// @Failure 	 500 {object} map[string]string "Internal Server Error"
+// @Failure 	 502 {object} map[string]string "The service is temporarily unavailable"
+// @Failure      401 {object} map[string]string "Invalid or expired tokens, tokens delete"
+// @Failure      400 {object} map[string]string "The tokens is not valid"
+// @Router       /refresh [get]
 func (apgt *ApiGatway) RefreshToken(c *gin.Context) {
 
 	access := c.GetHeader("Authorization")
@@ -198,7 +228,7 @@ func (apgt *ApiGatway) RefreshToken(c *gin.Context) {
 			return
 
 		case codes.Unavailable:
-			c.JSON(http.StatusUnauthorized, gin.H{
+			c.JSON(http.StatusBadGateway, gin.H{
 				"error": "the service is temporarily unavailable:",
 			})
 			return
@@ -207,15 +237,31 @@ func (apgt *ApiGatway) RefreshToken(c *gin.Context) {
 	}
 	c.Header("Authorization", res.AccessToken)
 	c.SetCookie("refresh_token", res.RefreshToken,
-		int(refreshTokenMaxAge), 
-		cookiePath,              
-		"localhost",             
-		false,                 
-		false,                   
+		int(refreshTokenMaxAge),
+		cookiePath,
+		"localhost",
+		false,
+		false,
 	)
 
 }
 
+// LogOut godoc
+//
+// @Summary      Validates the request and deletes refresh token session
+// @Description  Clears the refresh token cookie
+// @Security     ApiKeyAuth
+// @Tags         auth
+// @Security     ApiKeyAuth
+// @Param accessToken header string true "jwt access token"
+// @Param refresh_token header string true "refresh token"
+// @Success 204 "refresh token deleting"
+//
+// @Failure 	 500 {object} map[string]string "Internal Server Error"
+// @Failure 	 502 {object} map[string]string "The service is temporarily unavailable"
+// @Failure      401 {object} map[string]string "Invalid or expired tokens, tokens delete"
+// @Failure      400 {object} map[string]string "The tokens is not valid"
+// @Router       /logout [get]
 func (apgt *ApiGatway) LogOut(c *gin.Context) {
 
 	access := c.GetHeader("Authorization")
@@ -281,6 +327,7 @@ func (apgt *ApiGatway) LogOut(c *gin.Context) {
 				"error": "The service is temporarily unavailable:",
 			})
 			return
+
 		}
 
 	}
@@ -289,11 +336,11 @@ func (apgt *ApiGatway) LogOut(c *gin.Context) {
 
 func deleteCookieHandler(c *gin.Context) {
 	c.SetCookie("refresh_token", "refresh_token",
-		-1,          
-		cookiePath,  
-		"localhost", 
-		false,      
-		false,       
+		-1,
+		cookiePath,
+		"localhost",
+		false,
+		false,
 	)
 
 }

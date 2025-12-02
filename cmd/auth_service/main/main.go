@@ -32,7 +32,7 @@ func NewGRPCServer() (*grpc.Server, net.Listener) {
 		log.Fatalf("Failed to listen: %v", err)
 	}
 
-	db := postgresql.Сonnect(&authConfg.DbConfig)
+	db := postgresql.Connect(&authConfg.DbConfig)
 
 	res := db.Exec("CREATE SCHEMA IF NOT EXISTS tokens_info")
 	if res.Error != nil {

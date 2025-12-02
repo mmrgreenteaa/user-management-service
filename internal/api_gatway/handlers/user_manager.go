@@ -13,14 +13,30 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+type UserReg struct {
+	Login string `json:"login"  binding:"required" example:"my_user"`
+	Pass  string `json:"password"  binding:"required" example:"123"`
+	Email string `json:"email" binding:"required" example:"mrland@mail.com"`
+}
+
+// RegistrateUser godoc
+//
+//	@Summary        Registration new user in user_management service
+//	@Tags           user_management
+//	@Accept         json
+//	@Produce        json
+//	@Param          input body UserReg true "user's info"
+//
+// @Success 204 	"User added"
+//
+//	@Failure 	 500 {object} map[string]string "Internal Server Error"
+//
+// @Failure      400 {object} map[string]string "Invalid input"
+// @Failure      504 {object} map[string]string "it is not possible to connect to the service"
+// @Router         /users [post]
 func (apiGtwy *ApiGatway) RegistrateUser(c *gin.Context) {
 
-	type user struct {
-		Login string `json:"login"`
-		Pass  string `json:"password"`
-		Email string `json:"email"`
-	}
-	var useReq user
+	var useReq UserReg
 
 	if err := c.ShouldBindJSON(&useReq); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "json requst incorrect"})
@@ -61,12 +77,6 @@ func (apiGtwy *ApiGatway) RegistrateUser(c *gin.Context) {
 				"error": "invalid values",
 			})
 			return
-
-		case codes.Unauthenticated:
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "login or password invalid",
-			})
-			return
 		case codes.Unavailable:
 			c.JSON(http.StatusGatewayTimeout, gin.H{
 				"error": "the service is temporarily unavailable:",
@@ -77,13 +87,27 @@ func (apiGtwy *ApiGatway) RegistrateUser(c *gin.Context) {
 
 }
 
+type LoginEdit struct {
+	NewLogin string `json:"new_login" binding:"required" example:"my_usenewr"`
+}
+
+// EditUserLogin godoc
+//
+//	@Summary       Changes the user's login
+//	@Tags           user_management
+//	@Accept         json
+//	@Produce        json
+// 	@Security     ApiKeyAuth
+//	@Param          input body LoginEdit true "new login"
+// 	@Param accessToken header string true "jwt access token"
+// 	@Success 204 	"User edit"
+//	@Failure 	 500 {object} map[string]string "Internal Server Error"
+// 	@Failure      400 {object} map[string]string "Invalid input"
+// 	@Failure      504 {object} map[string]string "it is not possible to connect to the service"
+// 	@Router         /users [patch]
 func (apiGtwy *ApiGatway) EditUserLogin(c *gin.Context) {
 
-	type UserReq struct {
-		NewLogin string `json:"new_login"`
-	}
-
-	var userReq UserReq
+	var userReq LoginEdit
 	if err := c.ShouldBindJSON(&userReq); err != nil {
 		apiGtwy.logger.Error("failed edit user login json login not correct")
 		c.JSON(http.StatusBadRequest, gin.H{"error": "failed json values"})
@@ -112,7 +136,7 @@ func (apiGtwy *ApiGatway) EditUserLogin(c *gin.Context) {
 		UserId:   uid,
 		NewLogin: userReq.NewLogin,
 	}
-		ctx := metadata.NewOutgoingContext(c.Request.Context(), nil)
+	ctx := metadata.NewOutgoingContext(c.Request.Context(), nil)
 	_, err := apiGtwy.UserMenedger.EditLogin(ctx, &req)
 	if err != nil {
 		st, ok := status.FromError(err)
@@ -134,10 +158,28 @@ func (apiGtwy *ApiGatway) EditUserLogin(c *gin.Context) {
 				"error": "user id invalid",
 			})
 			return
+		case codes.Unavailable:
+			c.JSON(http.StatusGatewayTimeout, gin.H{
+				"error": "the service is temporarily unavailable:",
+			})
+			return
 		}
 	}
 }
 
+// DeleteAccount godoc
+//
+//	@Summary       delete user info 
+//	@Tags           user_management
+//	@Accept         json
+//	@Produce        json
+// @Security     ApiKeyAuth
+// @Param accessToken header string true "jwt access token"
+// @Success 204 	"User delete"
+//	@Failure 	 500 {object} map[string]string "Internal Server Error"
+// @Failure      400 {object} map[string]string "Invalid input"
+// @Failure      504 {object} map[string]string "it is not possible to connect to the service"
+// @Router         /users [delete]
 func (apiGtwy *ApiGatway) DeleteAccount(c *gin.Context) {
 
 	value, ok := c.Get("user_id")
@@ -180,7 +222,7 @@ func (apiGtwy *ApiGatway) DeleteAccount(c *gin.Context) {
 			return
 
 		case codes.Unavailable:
-			c.JSON(http.StatusUnauthorized, gin.H{
+			c.JSON(http.StatusGatewayTimeout, gin.H{
 				"error": "The service is temporarily unavailable:",
 			})
 			return

@@ -4,10 +4,19 @@ import (
 	"log"
 
 	"github.com/gin-gonic/gin"
+	_ "github.com/mmrgreenteaa/user-management-service/docs"
 	"github.com/mmrgreenteaa/user-management-service/config"
 	api "github.com/mmrgreenteaa/user-management-service/internal/api_gatway/handlers"
+	swaggerfiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
+// @title			User Management service
+// @version		1.0
+// @description	API for user management and access
+// @termsOfService	http://swagger.io/terms/
+// @host			localhost:8080
+// @BasePath		/api/v1
 func main() {
 	router := gin.Default()
 	cfg, err := config.GetApiGatwayConfg()
@@ -21,19 +30,23 @@ func main() {
 	}
 	v1 := router.Group("/api/v1")
 	{
+
 		auth := v1.Group("/auth")
 		{
 			auth.POST("/login", apgt.LogIn)
-			auth.GET("/logout", apgt.LogOut)
-			auth.GET("/refresh", apgt.RefreshToken)
+			 		auth.GET("/logout", apgt.LogOut)
+			auth.GET("/refresh", apgt.RefreshToken) 
+
 		}
-		userM := v1.Group("/user-manager")
-		{
-			userM.POST("/users", apgt.RegistrateUser)
-			userM.PATCH("/users", apgt.AuthMiddleware(), apgt.EditUserLogin)
-			userM.DELETE("/users", apgt.AuthMiddleware(), apgt.DeleteAccount)
-		}
+		 		userM := v1.Group("/user-manager")
+		   		{
+		   			userM.POST("/users", apgt.RegistrateUser)
+		   			userM.PATCH("/users", apgt.AuthMiddleware(), apgt.EditUserLogin)
+		   			userM.DELETE("/users", apgt.AuthMiddleware(), apgt.DeleteAccount)
+		   		} 
+
 	}
-	router.Run(":8080") 
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
+	router.Run(":8080")
 	log.Println(router.Routes())
 }

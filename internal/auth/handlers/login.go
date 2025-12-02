@@ -10,6 +10,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// Login authenticates the user and generates a new refresh token.
 func (s *AuthServer) Login(ctx context.Context, req *auth.UserInfoRequest) (*auth.SignInUserResponse, error) {
 
 	if req.Login == "" || req.Password == "" || req.UserAgent == "" || req.Ip == "" {
@@ -21,7 +22,7 @@ func (s *AuthServer) Login(ctx context.Context, req *auth.UserInfoRequest) (*aut
 		Login:    req.Login,
 		Password: req.Password,
 	}
-	res, err := s.UserClinet.VerifyCredentials(ctx, &uReq)
+	res, err := s.UserClient.VerifyCredentials(ctx, &uReq)
 	if err != nil {
 		st, ok := status.FromError(err)
 		if !ok {

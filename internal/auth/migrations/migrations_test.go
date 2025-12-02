@@ -19,7 +19,7 @@ func TestM1224_create_rerefresh_tokens(t *testing.T) {
 		Name:       "auth_service",
 		SearchPath: "tokens_info",
 	}
-	db := postgresql.Сonnect(&cfg)
+	db := postgresql.Connect(&cfg)
 
 	m := gormigrate.New(db.DB, gormigrate.DefaultOptions, []*gormigrate.Migration{M1224CreateRerefreshTokens()})
 

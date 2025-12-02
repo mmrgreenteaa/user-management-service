@@ -14,7 +14,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// Здесь middleware нужен
+// Logout validates the request and deletes the refresh token session.
 func (s *AuthServer) Logout(ctx context.Context, req *auth.LogoutRequest) (*emptypb.Empty, error) {
 
 	userIdVal := ctx.Value("user_id")

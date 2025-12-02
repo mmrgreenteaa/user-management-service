@@ -12,6 +12,7 @@ import (
 	"gorm.io/gorm"
 )
 
+// RefreshToken validates the request and update refresh token 
 func (s *AuthServer) RefreshToken(ctx context.Context, refresh *auth.RefreshRequest) (*auth.SignInUserResponse, error) {
 
 	userId, ok := ctx.Value("user_id").(string)
@@ -33,7 +34,7 @@ func (s *AuthServer) RefreshToken(ctx context.Context, refresh *auth.RefreshRequ
 			return nil, status.Error(codes.Unauthenticated, "fail user agent invalid")
 		}
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, status.Error(codes.Unauthenticated, "refresh token does not exist")
+			return nil, status.Error(codes.NotFound, "refresh token does not exist")
 		}
 		s.logger.Error("failed refresh valid", "Err:", slog.String("Error", err.Error()))
 		return nil, status.Error(codes.Internal, "failed refresh token valid")

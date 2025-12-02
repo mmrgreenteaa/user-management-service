@@ -1,0 +1,291 @@
+basePath: /api/v1
+definitions:
+  handlers.LoginEdit:
+    properties:
+      new_login:
+        example: my_usenewr
+        type: string
+    required:
+    - new_login
+    type: object
+  handlers.UserParm:
+    properties:
+      login:
+        example: my_user
+        type: string
+      password:
+        example: "123456"
+        type: string
+    required:
+    - login
+    - password
+    type: object
+  handlers.UserReg:
+    properties:
+      email:
+        example: mrland@mail.com
+        type: string
+      login:
+        example: my_user
+        type: string
+      password:
+        example: "123"
+        type: string
+    required:
+    - email
+    - login
+    - password
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: API for user management and access
+  termsOfService: http://swagger.io/terms/
+  title: User Management service
+  version: "1.0"
+paths:
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticates the user and generates a new refresh token
+      parameters:
+      - description: User login and password
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UserParm'
+      produces:
+      - application/json
+      responses:
+        "400":
+          description: Invalid input
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+        "504":
+          description: Service unavailable
+          schema:
+            type: string
+      summary: Authenticates the user
+      tags:
+      - auth
+  /logout:
+    get:
+      description: Clears the refresh token cookie
+      parameters:
+      - description: jwt access token
+        in: header
+        name: accessToken
+        required: true
+        type: string
+      - description: refresh token
+        in: header
+        name: refresh_token
+        required: true
+        type: string
+      responses:
+        "204":
+          description: refresh token deleting
+        "400":
+          description: The tokens is not valid
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Invalid or expired tokens, tokens delete
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "502":
+          description: The service is temporarily unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      - ApiKeyAuth: []
+      summary: Validates the request and deletes refresh token session
+      tags:
+      - auth
+  /refresh:
+    get:
+      description: Uses refresh token from cookie to issue new tokens
+      parameters:
+      - description: jwt access token
+        in: header
+        name: accessToken
+        required: true
+        type: string
+      - description: refresh token
+        in: header
+        name: refresh_token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "400":
+          description: The tokens is not valid
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Invalid or expired tokens, tokens delete
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "502":
+          description: The service is temporarily unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Validates the request and update refresh token
+      tags:
+      - auth
+  /users:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: jwt access token
+        in: header
+        name: accessToken
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: User delete
+        "400":
+          description: Invalid input
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "504":
+          description: it is not possible to connect to the service
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: delete user info
+      tags:
+      - user_management
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: new login
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.LoginEdit'
+      - description: jwt access token
+        in: header
+        name: accessToken
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: User edit
+        "400":
+          description: Invalid input
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "504":
+          description: it is not possible to connect to the service
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Changes the user's login
+      tags:
+      - user_management
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: user's info
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UserReg'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: User added
+        "400":
+          description: Invalid input
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "504":
+          description: it is not possible to connect to the service
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Registration new user in user_management service
+      tags:
+      - user_management
+swagger: "2.0"

@@ -75,8 +75,8 @@ func setupTestServer() *testSetup {
 	fakeClient := &fakeClinetServ{}
 
 	s := &AuthServer{
-		Db:         *postgresql.Сonnect(&dbcfg),
-		UserClinet: fakeClient,
+		Db:         *postgresql.Connect(&dbcfg),
+		UserClient: fakeClient,
 		logger:     slog.New(slog.NewTextHandler(os.Stdout, nil)),
 	}
 
@@ -150,7 +150,7 @@ func TestRefresh(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 
-			ctx := context.WithValue(context.Background(), UserIdJwt, userId)
+			ctx := context.WithValue(context.Background(), "user_id", userId)
 			md := metadata.Pairs("authorization", test.accsess)
 			newctx := metadata.NewOutgoingContext(ctx, md)
 
