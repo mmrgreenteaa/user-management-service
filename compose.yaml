@@ -7,6 +7,12 @@ services:
     - "62580:62580"
     depends_on:
     - posgredb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     environment:
     -  AUTH_SECRET_KEY=23123
     - AUTH_PASSWORD_DB=QWERTY
@@ -17,8 +23,6 @@ services:
       dockerfile: Dockerfile.user-manager
      ports:
       - "62380:62380" 
-     environment:
-      - "USER_MANADGER_PASS_DB"
   
   api_gateway:
     build:
@@ -26,6 +30,8 @@ services:
         dockerfile: Dockerfile.api-gateway
     ports:
       - "8080:8080"
+    depends_on:
+      - redis
   posgredb:
     image: postgres:13-alpine
     environment:
@@ -36,7 +42,16 @@ services:
       - "5432:5432"
   mongo:
     image: mongo:latest
-    container_name: my_mongo
     ports:
       - "27017:27017"
-
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    command: --config.file=/etc/prometheus/prometheus.yml

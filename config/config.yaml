@@ -1,5 +1,7 @@
 api_gateway:       
   listen_addr: :62480 
+  redis:
+    listen_addr: redis:6379
 services_endpoints:
   auth: auth:62580
   user_manager: user_manager:62380
@@ -17,5 +19,3 @@ manager:
   listen_addr: :62380
   mongodb:
     ip:  mongo:27017
-    user: admin
-    password: secret

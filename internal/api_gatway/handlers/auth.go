@@ -1,13 +1,15 @@
 package handlers
 
 import (
-	"log"
+	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/mmrgreenteaa/user-management-service/internal/api_gatway/redis"
 	authpb "github.com/mmrgreenteaa/user-management-service/internal/gen/proto/auth"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -56,8 +58,10 @@ func (apgt *ApiGatway) LogIn(c *gin.Context) {
 		UserAgent: c.Request.UserAgent(),
 		Ip:        c.ClientIP(),
 	}
-	ctx := metadata.NewOutgoingContext(c.Request.Context(), nil)
-	res, err := apgt.AuthServis.Login(ctx, &req)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second)
+	defer cancel()
+	ctxgrpc := metadata.NewOutgoingContext(ctx, nil)
+	res, err := apgt.AuthServis.Login(ctxgrpc, &req)
 	apgt.logger.Info("login attempt", slog.String("login", req.Login))
 	if err != nil {
 		st, ok := status.FromError(err)
@@ -91,7 +95,7 @@ func (apgt *ApiGatway) LogIn(c *gin.Context) {
 			})
 			return
 		}
-
+		return
 	}
 	c.Header("Authorization", res.AccessToken)
 	c.SetCookie("refresh_token", res.RefreshToken,
@@ -115,43 +119,60 @@ func (apgt ApiGatway) AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 		tokenStr := strings.TrimPrefix(token, "Bearer ")
-		req := authpb.AccessRequest{
-			Token: tokenStr,
-		}
-		ctx := metadata.NewOutgoingContext(c.Request.Context(), nil)
-		res, err := apgt.AuthServis.VerifyAccess(ctx, &req)
+		userId, err := apgt.Rdb.GetJwt(tokenStr)
 		if err != nil {
-			st, ok := status.FromError(err)
-			if !ok {
-				apgt.logger.Error("non-gRPC error during auth", slog.String("error", err.Error()))
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
-				return
-			}
-
-			apgt.logger.Warn("auth failed",
-				slog.String("grpc_code", st.Code().String()),
-				slog.String("message", st.Message()))
-
-			switch st.Code() {
-			case codes.Internal:
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
-				return
-
-			case codes.Unauthenticated:
-				c.JSON(http.StatusUnauthorized, gin.H{
-					"error": "invalid or expired token",
-				})
-				return
-			case codes.Unavailable:
-				c.JSON(http.StatusGatewayTimeout, gin.H{
-					"error": "the service is temporarily unavailable:",
+			if errors.Is(err, redis.ErrNoRecord) {
+				apgt.logger.Info("jwt token not found in redis")
+			} else {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"error": "failed gets jwt in redis",
 				})
 				return
 			}
 		}
-		log.Println(res.UserId)
-		c.Set("user_id", res.UserId)
-		c.Next()
+		if userId == "" {
+			req := authpb.AccessRequest{
+				Token: tokenStr,
+			}
+			ctx := metadata.NewOutgoingContext(c.Request.Context(), nil)
+			res, err := apgt.AuthServis.VerifyAccess(ctx, &req)
+			if err != nil {
+				st, ok := status.FromError(err)
+				if !ok {
+					apgt.logger.Error("non-gRPC error during auth", slog.String("error", err.Error()))
+					c.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
+					return
+				}
+
+				apgt.logger.Warn("auth failed",
+					slog.String("grpc_code", st.Code().String()),
+					slog.String("message", st.Message()))
+
+				switch st.Code() {
+				case codes.Internal:
+					c.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
+					return
+
+				case codes.Unauthenticated:
+					c.JSON(http.StatusUnauthorized, gin.H{
+						"error": "invalid or expired token",
+					})
+					return
+				case codes.Unavailable:
+					c.JSON(http.StatusGatewayTimeout, gin.H{
+						"error": "the service is temporarily unavailable:",
+					})
+					return
+				}
+			}
+			apgt.Rdb.AddJwt(tokenStr, res.UserId)
+			c.Set("user_id", res.UserId)
+			c.Next()
+		} else {
+
+			c.Set("user_id", userId)
+			c.Next()
+		}
 
 	}
 }

@@ -20,7 +20,12 @@ import (
 
 var logger = slog.Default()
 
-func NewGRPCServer() (*grpc.Server, net.Listener) {
+type mainAuth struct {
+	auth auth.AuthServer
+	serv *grpc.Server
+}
+
+func NewGRPCServer() (*mainAuth, net.Listener) {
 
 	authConfg, err := config.GetAuth()
 	if err != nil {
@@ -33,7 +38,6 @@ func NewGRPCServer() (*grpc.Server, net.Listener) {
 	}
 
 	db := postgresql.Connect(&authConfg.DbConfig)
-
 	res := db.Exec("CREATE SCHEMA IF NOT EXISTS tokens_info")
 	if res.Error != nil {
 		log.Fatal(res.Error)
@@ -50,16 +54,19 @@ func NewGRPCServer() (*grpc.Server, net.Listener) {
 	grpcServer := grpc.NewServer(grpc.UnaryInterceptor(grpc_auth.UnaryServerInterceptor(as.ParseJWT)))
 	genAuth.RegisterAuthServer(grpcServer, as)
 
-	return grpcServer, lis
+	return &mainAuth{
+		auth: *as,
+		serv: grpcServer,
+	}, lis
 }
 
 func main() {
 
-	serv, lis := NewGRPCServer()
+	auth, lis := NewGRPCServer()
 
 	go func() {
 		log.Printf("gRPC server is starting on %s", lis.Addr())
-		if err := serv.Serve(lis); err != nil {
+		if err := auth.serv.Serve(lis); err != nil {
 			log.Fatalf("failed to serve: %v", err)
 		}
 	}()
@@ -69,7 +76,7 @@ func main() {
 
 	<-quit
 	log.Println("Shutting down gRPC server...")
-	serv.GracefulStop()
+	auth.serv.GracefulStop()
 	log.Println("Server gracefully stopped.")
 
 }
